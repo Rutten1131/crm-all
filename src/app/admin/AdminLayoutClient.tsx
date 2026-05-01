@@ -41,7 +41,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
     if (isOp) {
       return ['/admin/operador', '/admin/operador/nuevo', '/admin/operador/proyecto/offline-shell', '/admin/inventario', '/admin/cotizaciones', '/admin/calendario']
     }
-    return ['/admin', '/admin/proyectos', '/admin/proyectos/nuevo', '/admin/inventario', '/admin/cotizaciones', '/admin/calendario']
+    return ['/admin', '/admin/proyectos', '/admin/proyectos/offline-shell', '/admin/proyectos/nuevo', '/admin/inventario', '/admin/cotizaciones', '/admin/calendario']
   }
 
   const pagesToPrefetch = getPagesToPrefetch()

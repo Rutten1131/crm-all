@@ -7,7 +7,7 @@ export interface UploadResult {
   url: string;
   filename: string;
   mimeType: string;
-  type: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  type: 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT';
 }
 
 export async function uploadToBunnyClientSide(
@@ -49,7 +49,7 @@ export async function uploadToBunnyClientSide(
   }
 
   // 4. Determine type for the frontend
-  let type: 'IMAGE' | 'VIDEO' | 'DOCUMENT' = 'DOCUMENT';
+  let type: 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT' = 'DOCUMENT';
   let mimeType = file.type;
   
   // Fallback check by extension if mime type is missing
@@ -58,9 +58,13 @@ export async function uploadToBunnyClientSide(
     type = 'IMAGE';
     if (!mimeType) mimeType = ext === 'webp' ? 'image/webp' : `image/${ext}`;
   }
-  else if (mimeType.startsWith('video/') || ['mp4', 'mov', 'webm'].includes(ext)) {
+  else if (mimeType.startsWith('video/') || ['mp4', 'mov', 'webm', '3gp', 'm4v', 'avi'].includes(ext)) {
     type = 'VIDEO';
     if (!mimeType) mimeType = `video/${ext}`;
+  }
+  else if (mimeType.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext)) {
+    type = 'AUDIO';
+    if (!mimeType) mimeType = `audio/${ext}`;
   }
 
   return {

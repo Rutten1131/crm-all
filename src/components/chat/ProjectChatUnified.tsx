@@ -186,7 +186,7 @@ export default function ProjectChatUnified({
     onSendMessage(inputValue, 'TEXT', { phaseId: selectedPhaseId })
     setInputValue('')
     // Reset lock after a small timeout to allow UI state to catch up
-    setTimeout(() => { sendLockRef.current = false }, 1000)
+    setTimeout(() => { sendLockRef.current = false }, 400)
   }
 
   const handleGetGPS = () => {
@@ -271,7 +271,7 @@ export default function ProjectChatUnified({
       sendLockRef.current = true;
       const type = file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE';
       onSendMessage('', type, { file });
-      setTimeout(() => { sendLockRef.current = false }, 1000)
+      setTimeout(() => { sendLockRef.current = false }, 400)
     }
   }
 

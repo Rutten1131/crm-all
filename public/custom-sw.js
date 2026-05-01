@@ -22,7 +22,7 @@ const PRE_CACHE = [
   '/cotizacion.jpg'
 ];
 
-const VERSION = 'v254';
+const VERSION = 'v263';
 
 // v242: Helper to bypass Chrome's "redirected response" security block
 function cleanResponse(response) {
@@ -247,17 +247,20 @@ async function rscNetworkFirst(request) {
     // Instead of random project data, we serve the lightweight official shell
     const isAdminProjectRsc = url.pathname.match(/\/admin\/proyectos\/\d+/);
     const isOperatorProjectRsc = url.pathname.match(/\/admin\/operador\/proyecto\/\d+/) || url.pathname.match(/\/operador\/proyecto\/\d+/);
-    
+
     if (isAdminProjectRsc || isOperatorProjectRsc) {
+      const rscCache = await caches.open(RSC_CACHE);
       if (isAdminProjectRsc) {
         console.log(`[SW ${VERSION}] RSC Cache miss for admin project, serving Universal RSC Shell...`);
-        const shellMatch = await caches.match('/admin/proyectos/offline-shell?_rsc=1', { ignoreVary: true }) || 
+        // v263: Prioritize exact RSC shell match from GlobalSyncWorker
+        const shellMatch = await rscCache.match('/admin/proyectos/offline-shell') || 
+                           await caches.match('/admin/proyectos/offline-shell?_rsc=1', { ignoreVary: true }) || 
                            await caches.match('/admin/proyectos/offline-shell', { ignoreVary: true, ignoreSearch: true });
         if (shellMatch) return shellMatch;
       } else if (isOperatorProjectRsc) {
         console.log(`[SW ${VERSION}] RSC Cache miss for operator project, serving Universal RSC Shell...`);
-        // v253: Corrected operator shell path
-        const shellMatch = await caches.match('/admin/operador/proyecto/offline-shell?_rsc=1', { ignoreVary: true }) || 
+        const shellMatch = await rscCache.match('/admin/operador/proyecto/offline-shell') || 
+                           await caches.match('/admin/operador/proyecto/offline-shell?_rsc=1', { ignoreVary: true }) || 
                            await caches.match('/admin/operador/proyecto/offline-shell', { ignoreVary: true, ignoreSearch: true });
         if (shellMatch) return shellMatch;
       }
@@ -775,6 +778,12 @@ self.addEventListener('message', (event) => {
     });
   }
 
+  // v263: Consolidated PRECACHE_URLS and TRIGGER_SYNC handlers
+  if (event.data && event.data.type === 'TRIGGER_SYNC') {
+    console.log('[SW] Sync triggered via postMessage');
+    event.waitUntil(processOutboxSync());
+  }
+
   // Warm-up pre-caching — caches responses INCLUDING redirects (except login)
   if (event.data && event.data.type === 'PRECACHE_URLS') {
     const urls = event.data.urls || [];
@@ -788,7 +797,6 @@ self.addEventListener('message', (event) => {
             // v233: Strict skip if already in cache and response is valid
             const existing = await cache.match(url);
             if (existing && existing.ok && !existing.redirected) {
-               // console.log('[SW] Valid cache exists, skipping:', url);
                continue;
             }
 
@@ -798,7 +806,7 @@ self.addEventListener('message', (event) => {
             const response = await fetchWithTimeout(new Request(url, { 
               credentials: 'same-origin',
               headers: { 'Cache-Control': 'no-cache', 'Accept': 'text/html' }
-            }), 15000); // Increased timeout for slow mobile networks
+            }), 15000); 
 
             if (response.ok) {
               const contentType = response.headers.get('Content-Type') || '';
@@ -814,7 +822,6 @@ self.addEventListener('message', (event) => {
                 // v227: Extract and pre-cache JS chunks found in the HTML
                 try {
                   const htmlText = await response.clone().text();
-                  // Find all _next/static/... references and catch more variants
                   const chunkMatches = htmlText.matchAll(/\/(_next\/static\/[^"'\s>]+)/g);
                   const assetsCache = await caches.open(ASSETS_CACHE);
                   
@@ -822,7 +829,6 @@ self.addEventListener('message', (event) => {
                     const chunkPath = match[1];
                     const fullChunkUrl = new URL('/' + chunkPath, self.location.origin).href;
                     
-                    // Small check to avoid re-fetching if already in assets cache
                     const hasChunk = await assetsCache.match(fullChunkUrl);
                     if (!hasChunk) {
                       fetch(fullChunkUrl, { priority: 'low' })
@@ -836,10 +842,12 @@ self.addEventListener('message', (event) => {
                 }
 
                 console.log(`[SW ${VERSION}] Warm-cached success (+chunks):`, url);
+              } else if (!isLoginRedirect) {
+                // v263: Also cache non-HTML (like RSC shells) if they are requested via pre-cache
+                await cache.put(url, response.clone());
               }
             }
             
-            // v223: Delay between requests to avoid saturation
             await new Promise(r => setTimeout(r, 600)); 
           } catch (e) {
             console.warn(`[SW ${VERSION}] Warm-cache failed for:`, url);
@@ -868,33 +876,6 @@ self.addEventListener('periodicsync', (event) => {
   }
 });
 
-// ─── MESSAGE HANDLER ──────────────────────────────────────────────
-// Allows the client (GlobalSyncWorker) to trigger sync via postMessage
-// This is the CRITICAL path for background sync on Android:
-//   - When the app is minimized, JS timers are suspended
-//   - But the SW stays alive briefly after receiving a message
-//   - So the client sends TRIGGER_SYNC before going to background
-self.addEventListener('message', (event) => {
-  const { type, urls } = event.data || {};
-
-  if (type === 'TRIGGER_SYNC') {
-    console.log('[SW] Sync triggered via postMessage');
-    event.waitUntil(processOutboxSync());
-  }
-
-  if (type === 'PRECACHE_URLS' && urls && Array.isArray(urls)) {
-    event.waitUntil(
-      (async () => {
-              console.log(`[SW] Pre-cached via message: ${url}`);
-            }
-          } catch (e) {
-            console.warn(`[SW] Pre-cache failed for: ${url}`);
-          }
-        }
-      })()
-    );
-  }
-});
 
 function openAquatechDB() {
   return new Promise((resolve, reject) => {

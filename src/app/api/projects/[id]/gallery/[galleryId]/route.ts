@@ -90,9 +90,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Archivo no encontrado' }, { status: 404 })
     }
 
-    await prisma.projectGalleryItem.delete({
-      where: { id: galleryId }
-    })
+    try {
+      await prisma.projectGalleryItem.delete({
+        where: { id: galleryId }
+      })
+    } catch (err: any) {
+      if (err.code === 'P2025') {
+        // Already deleted, treat as success
+        return NextResponse.json({ success: true, message: 'Imagen ya estaba eliminada' })
+      }
+      throw err;
+    }
 
     return NextResponse.json({ success: true, message: 'Imagen eliminada correctamente' })
   } catch (error) {

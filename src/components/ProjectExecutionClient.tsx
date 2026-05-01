@@ -75,7 +75,7 @@ export default function ProjectExecutionClient({
   const hasRecoveredRef = useRef(false)
   const liveChatInitialized = useRef(false)
   const liveChatRef = useRef(liveChat)
-  const sendLockRef = useRef(false)
+  const saveLockRef = useRef(false)
   const teamLockRef = useRef(false)
 
 
@@ -240,7 +240,7 @@ export default function ProjectExecutionClient({
         return
       }
 
-      const res = await fetch(`/api/projects/${idFromUrl}/team`, {
+      const res = await fetch(`/api/projects/${project?.id || idFromUrl}/team`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ operatorIds: selectedTeamIds })
@@ -285,7 +285,7 @@ export default function ProjectExecutionClient({
       try {
         await db.outbox.add({
           type: 'GALLERY_DELETE',
-          projectId: idFromUrl,
+          projectId: project?.id || idFromUrl,
           payload: { galleryId: itemId }, // v255: Consistente con GlobalSyncWorker
           timestamp: Date.now(),
           status: 'pending'
@@ -298,7 +298,7 @@ export default function ProjectExecutionClient({
     }
 
     try {
-      const res = await fetch(`/api/projects/${idFromUrl}/gallery/${itemId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/projects/${project?.id || idFromUrl}/gallery/${itemId}`, { method: 'DELETE' })
       if (res.ok) {
         startTransition(() => { if (typeof navigator !== 'undefined' && navigator.onLine) router.refresh() })
       } else { alert('Error eliminando archivo') }
@@ -461,7 +461,7 @@ export default function ProjectExecutionClient({
     const fetchExpenses = async () => {
       if (!navigator.onLine) return
       try {
-        const resp = await fetch(`/api/operator/projects/${idFromUrl}/expenses?_t=${Date.now()}`, { cache: 'no-store' })
+        const resp = await fetch(`/api/operator/projects/${project?.id || idFromUrl}/expenses?_t=${Date.now()}`, { cache: 'no-store' })
         if (resp.ok) {
           const fresh = await resp.json()
           if (Array.isArray(fresh) && fresh.length > 0) setLocalExpenses(fresh)
@@ -528,7 +528,7 @@ export default function ProjectExecutionClient({
     }).map((item: any) => ({
       id: `pending-${item.id}`, url: item.payload?.url || item.payload?.base64 || '',
       filename: item.payload?.filename || 'Pendiente...', mimeType: item.payload?.mimeType || 'image/jpeg',
-      category: 'MASTER', isPending: true
+      category: item.payload?.category || 'MASTER', isPending: true
     }))
     const list = [...baseFiles, ...expenseFiles, ...pendingGallery]
     return list.filter((item: any) => {
@@ -762,7 +762,7 @@ export default function ProjectExecutionClient({
           lat: location?.lat,
           lng: location?.lng,
           status: 'pending'
-        })
+})
         triggerBackgroundSync()
       }
     } catch (e) {
@@ -775,7 +775,11 @@ export default function ProjectExecutionClient({
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (saveLockRef.current) return;
+    saveLockRef.current = true;
     setLoading(true)
+
     try {
       let location: any = null
       if ('geolocation' in navigator) {
@@ -788,93 +792,114 @@ export default function ProjectExecutionClient({
         })
       }
 
-      /* Session validation removed */
-
       if (!location) {
         alert("⚠️ UBICACIÓN REQUERIDA: No podemos registrar el gasto sin coordenadas de GPS. Por favor activa la ubicación.")
         setLoading(false)
+        saveLockRef.current = false;
         return
       }
 
-    const processExpense = async () => {
-      try {
-        let processedPhoto = expensePhoto
-        if (processedPhoto && processedPhoto.startsWith('data:') && navigator.onLine) {
-          try {
-            const { uploadToBunnyClientSide } = await import('@/lib/storage-client')
-            const resB64 = await fetch(processedPhoto)
-            const blob = await resB64.blob()
-            const uploadResult = await uploadToBunnyClientSide(blob, `expense_${Date.now()}.webp`, `projects/${project.id}/expenses`)
-            processedPhoto = uploadResult.url
-          } catch (uploadError) {
-            console.error('Failed to upload expense photo directly:', uploadError)
-          }
-        }
+      const syncId = `expense-${project.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
-        const payload = { 
-          amount: Number(amount), 
-          description, 
-          date: new Date().toISOString(),
-          isNote,
-          receiptPhoto: processedPhoto,
-          phaseId: activePhase
-        }
-
-        if (!navigator.onLine) {
-          await db.outbox.add({
-            type: 'EXPENSE',
-            projectId: project.id,
-            payload,
-            timestamp: Date.now(),
-            lat: location?.lat,
-            lng: location?.lng,
-            status: 'pending'
-          })
-          triggerBackgroundSync()
-          return
-        }
-
+      const processExpense = async () => {
         try {
-          const res = await fetch(`/api/projects/${project.id}/expenses`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              ...payload,
-              lat: location?.lat,
-              lng: location?.lng
-            })
-          })
-          if (res.ok) {
-            startTransition(() => {
-              if (typeof navigator !== 'undefined' && navigator.onLine) {
-       router.refresh()
-     }
-            })
-          }
-        } catch (err) {
-          await db.outbox.add({
-            type: 'EXPENSE',
-            projectId: project.id,
-            payload,
-            timestamp: Date.now(),
-            lat: location?.lat,
-            lng: location?.lng,
-            status: 'pending'
-          })
-          triggerBackgroundSync()
-        }
-      } catch (e) {
-        console.error("Background expense error:", e)
-      }
-    }
+          let processedPhoto = expensePhoto
+          
+          // Compressing if possible
+          if (processedPhoto && processedPhoto.startsWith('data:') && navigator.onLine) {
+            try {
+              const { uploadToBunnyClientSide } = await import('@/lib/storage-client')
+              const resB64 = await fetch(processedPhoto)
+              const blob = await resB64.blob()
+              
+              // Apply compression if it's an image
+              let finalBlob = blob;
+              if (blob.type.startsWith('image/')) {
+                finalBlob = (await optimizedCompress(new File([blob], "receipt.jpg", { type: blob.type }))) as Blob;
+              }
 
-    setExpenseForm(false)
-    removeExpenseDraft()
-    await processExpense() // Fix: Await the process before clearing loading
-    setLoading(false)
+              const uploadResult = await uploadToBunnyClientSide(finalBlob, `expense_${Date.now()}.webp`, `projects/${project.id}/expenses`)
+              processedPhoto = uploadResult.url
+            } catch (uploadError) {
+              console.error('Failed to upload expense photo directly:', uploadError)
+            }
+          }
+
+          const payload = { 
+            amount: Number(amount), 
+            description, 
+            date: new Date().toISOString(),
+            isNote,
+            receiptPhoto: processedPhoto,
+            phaseId: activePhase
+          }
+
+          if (!navigator.onLine) {
+            await db.transaction('rw', db.outbox, async () => {
+              await db.outbox.add({
+                type: 'EXPENSE',
+                projectId: project.id,
+                payload,
+                timestamp: Date.now(),
+                lat: location?.lat,
+                lng: location?.lng,
+                status: 'pending',
+                syncId
+              })
+            })
+            triggerBackgroundSync()
+            return
+          }
+
+          try {
+            const res = await fetch(`/api/projects/${project.id}/expenses`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'x-sync-id': syncId
+              },
+              body: JSON.stringify({ 
+                ...payload,
+                lat: location?.lat,
+                lng: location?.lng
+              })
+            })
+            if (res.ok) {
+              startTransition(() => {
+                if (typeof navigator !== 'undefined' && navigator.onLine) {
+                  router.refresh()
+                }
+              })
+            }
+          } catch (err) {
+            await db.transaction('rw', db.outbox, async () => {
+              await db.outbox.add({
+                type: 'EXPENSE',
+                projectId: project.id,
+                payload,
+                timestamp: Date.now(),
+                lat: location?.lat,
+                lng: location?.lng,
+                status: 'pending',
+                syncId
+              })
+            })
+            triggerBackgroundSync()
+          }
+        } catch (e) {
+          console.error("Background expense error:", e)
+        }
+      }
+
+      setExpenseForm(false)
+      removeExpenseDraft()
+      await processExpense()
+      setLoading(false)
     } catch (e) {
       console.error("Outer expense error:", e)
       setLoading(false)
+    } finally {
+      saveLockRef.current = false;
     }
   }
 
@@ -939,15 +964,19 @@ export default function ProjectExecutionClient({
     }
   }
 
-   const handleSendMessage = async (e: React.FormEvent, customMsg?: string, customPhase?: number, mediaFile?: File, extraData?: any, forcedType?: string) => {
+  const handleSendMessage = async (e: React.FormEvent, customMsg?: string, customPhase?: number, mediaFile?: File, extraData?: any, forcedType?: string) => {
     if (e) e.preventDefault()
-
 
     const msgToSend = customMsg || message
     const phaseIdToSend = customPhase !== undefined ? customPhase : activePhase
     
-    if (!msgToSend.trim() && !mediaFile && !customMsg) return
+    if (!msgToSend.trim() && !mediaFile && !customMsg) {
+      return
+    }
     
+    // Generate Sync ID for Idempotency
+    const syncId = `chat-op-${project.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
     // Determine type
     const determinedType = forcedType || (extraData?.amount ? 'EXPENSE_LOG' : (
       mediaFile ? (
@@ -957,34 +986,30 @@ export default function ProjectExecutionClient({
       ) : 'TEXT'
     ))
 
-    const isTechnicalAction = mediaFile || customPhase !== undefined
-    /* Session validation removed */
-
-    // --- OPTIMISTIC UI UPDATE ---
-    const tempId = `temp-${Date.now()}-${Math.random()}`
+    // --- OPTIMISTIC UI UPDATE (IMMEDIATE) ---
+    const tempId = `temp-${syncId}`
     let tempMediaUrl = null
     if (mediaFile) {
       try { tempMediaUrl = URL.createObjectURL(mediaFile) } catch(e){}
     }
     
-    setLiveChat((prev: any[]) => [
-      ...prev,
-      {
-        id: tempId,
-        content: msgToSend,
-        type: determinedType,
-        media: tempMediaUrl ? { url: tempMediaUrl, mimeType: mediaFile?.type || '' } : null,
-        extraData: extraData || null,
-        createdAt: new Date().toISOString(),
-        isMe: true,
-        userName: session?.user?.name || 'Yo',
-        userBranch: (session?.user as any)?.branch || null,
-        status: 'pending'
-      }
-    ])
-
     if (!customMsg) removeMessageDraft()
     else removeNoteDraft()
+
+    const optimisticMessage = {
+      id: tempId,
+      content: msgToSend,
+      type: determinedType,
+      media: tempMediaUrl ? { url: tempMediaUrl, mimeType: mediaFile?.type || '' } : null,
+      extraData: extraData || null,
+      createdAt: new Date().toISOString(),
+      isMe: true,
+      userName: session?.user?.name || 'Yo',
+      userBranch: (session?.user as any)?.branch || null,
+      status: 'pending' // Initial status
+    };
+
+    setLiveChat((prev: any[]) => [...prev, optimisticMessage]);
 
     // --- ASYNC BACKGROUND PROCESSING ---
     const processMessage = async () => {
@@ -997,44 +1022,43 @@ export default function ProjectExecutionClient({
             navigator.geolocation.getCurrentPosition(
               pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
               () => resolve(null),
-              { enableHighAccuracy: false, timeout: 5000 } // Faster timeout for better UX
+              { enableHighAccuracy: false, timeout: 5000 }
             )
           })
         }
 
-        if (!location) {
-          console.warn("Ubicación no detectada, enviando sin coordenadas para mayor rapidez.")
-        }
-
       let mediaData: any = null
       let uploadErrorOccurred = false;
+      
+      // Mandatory Compression
+      let processedMedia = mediaFile;
+      let finalFilename = mediaFile?.name || 'archivo';
+
       if (mediaFile && navigator.onLine) {
         try {
           const { uploadToBunnyClientSide } = await import('@/lib/storage-client')
-          let uploadFile: File | Blob = mediaFile
-
-          let finalFilename = mediaFile.name
+          
           if (isCompressibleImage(mediaFile)) {
-            uploadFile = await optimizedCompress(mediaFile)
+            processedMedia = (await optimizedCompress(mediaFile)) as File;
             finalFilename = finalFilename.replace(/\.[^/.]+$/, "") + ".webp"
           }
 
-          const uploadResult = await uploadToBunnyClientSide(uploadFile, finalFilename, `projects/${project.id}/chat`)
+          const uploadResult = await uploadToBunnyClientSide(processedMedia!, finalFilename, `projects/${project.id}/chat`)
           mediaData = {
             url: uploadResult.url,
             filename: uploadResult.filename,
             mimeType: uploadResult.mimeType,
+            type: uploadResult.type, // Include the detected type
             category: 'CHAT'
           }
         } catch (uploadError) {
-          console.error('Failed to upload media directly:', uploadError)
+          console.error('[CHAT] Upload error:', uploadError)
           uploadErrorOccurred = true;
         }
       } else if (mediaFile && !navigator.onLine) {
-        uploadErrorOccurred = true; // Force outbox
+        uploadErrorOccurred = true; 
       }
 
-      // Clean extraData from File objects before sending
       const cleanExtraData = extraData ? { ...extraData } : undefined;
       if (cleanExtraData && cleanExtraData.file) delete cleanExtraData.file;
 
@@ -1046,50 +1070,55 @@ export default function ProjectExecutionClient({
         extraData: cleanExtraData
       }
 
+      // --- OFFLINE OR UPLOAD ERROR FALLBACK ---
       if (!navigator.onLine || uploadErrorOccurred) {
-         if (mediaFile) {
-           try {
-             const fileToStore = isCompressibleImage(mediaFile) ? await optimizedCompress(mediaFile) : mediaFile;
-             const base64 = await blobToBase64(fileToStore);
-              payload.media = {
-                base64: base64,
-                filename: mediaFile.name.replace(/\.[^/.]+$/, '') + (isCompressibleImage(mediaFile) ? '.webp' : ''),
-                mimeType: isCompressibleImage(mediaFile) ? 'image/webp' : mediaFile.type,
-                category: 'CHAT'
-              };
-           } catch (e) {
-             console.warn('[Offline] Failed to convert file to base64:', e);
+         await db.transaction('rw', db.outbox, async () => {
+           if (mediaFile) {
+             try {
+               const fileToStore = isCompressibleImage(mediaFile) ? await optimizedCompress(mediaFile) : mediaFile;
+               const base64 = await blobToBase64(fileToStore);
+                payload.media = {
+                  base64: base64,
+                  filename: mediaFile.name,
+                  mimeType: mediaFile.type || (isCompressibleImage(mediaFile) ? 'image/webp' : 'application/octet-stream'),
+                  type: determinedType, // Include original determined type
+                  category: 'CHAT'
+                };
+             } catch (e) {
+               console.warn('[Offline] Media conversion failed:', e);
+             }
            }
-         }
 
-         await db.outbox.add({
-            type: 'MESSAGE',
-            projectId: idFromUrl,
-            payload: payload,
-            timestamp: Date.now(),
-            lat: location?.lat,
-            lng: location?.lng,
-            status: 'pending'
-         })
+           await db.outbox.add({
+              type: 'MESSAGE',
+              projectId: project.id,
+              payload: payload,
+              timestamp: Date.now(),
+              lat: location?.lat,
+              lng: location?.lng,
+              status: 'pending',
+              syncId
+           })
+         });
          
-         // Remove ephemeral optimistic msg and let pendingItems (useLiveQuery) take over
-         setLiveChat(prev => prev.filter(m => m.id !== tempId))
+         setLiveChat(prev => prev.map(m => m.id === tempId ? { ...m, status: 'pending_sync' } : m))
          triggerBackgroundSync()
          return
       }
 
+      // --- ONLINE SEND ---
       try {
-        const res = await fetch(`/api/projects/${idFromUrl}/messages`, {
+        const res = await fetch(`/api/projects/${project.id}/messages`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-sync-id': syncId 
+            },
             body: JSON.stringify({ ...payload, lat: location?.lat, lng: location?.lng })
         })
-        if (!res.ok && res.status !== 401) throw new Error('Network error')
         
         if (res.ok) {
           const createdMsg = await res.json()
-        
-          // Replace optimistic message with real message
           setLiveChat(prev => prev.map(m => m.id === tempId ? {
             ...createdMsg,
             isMe: true,
@@ -1099,40 +1128,46 @@ export default function ProjectExecutionClient({
           
           if (payload.type === 'EXPENSE_LOG') {
             if (typeof navigator !== 'undefined' && navigator.onLine) {
-       router.refresh()
-     }
+              router.refresh()
+            }
           }
+        } else {
+          throw new Error('Server error')
         }
       } catch (e) {
-         // Convert File to ArrayBuffer for IDB persistence
-         let fileData: any = null;
-         if (mediaFile) {
-           try {
-             const buffer = await mediaFile.arrayBuffer();
-             fileData = { buffer, name: mediaFile.name, type: mediaFile.type, size: mediaFile.size };
-           } catch (err) { console.warn('[Offline] File buffer conversion failed:', err); }
-         }
-         await db.outbox.add({
-            type: 'MESSAGE',
-            projectId: project.id,
-            payload: { ...payload, fileData },
-            timestamp: Date.now(),
-            lat: location?.lat,
-            lng: location?.lng,
-            status: 'pending'
-         })
+         await db.transaction('rw', db.outbox, async () => {
+           if (mediaFile && !payload.media) {
+             try {
+               const base64 = await blobToBase64(mediaFile);
+                payload.media = {
+                  base64: base64,
+                  filename: mediaFile.name,
+                  mimeType: mediaFile.type,
+                  category: 'CHAT'
+                };
+             } catch (err) { console.warn('[Offline] Serialisation fallback failed:', err); }
+           }
+           await db.outbox.add({
+              type: 'MESSAGE',
+              projectId: project.id,
+              payload: payload,
+              timestamp: Date.now(),
+              lat: location?.lat,
+              lng: location?.lng,
+              status: 'pending',
+              syncId
+           })
+         });
          setLiveChat(prev => prev.map(m => m.id === tempId ? { ...m, status: 'pending_sync' } : m))
+         triggerBackgroundSync()
       }
       } catch (outerError) {
-        console.error("Outer background process error:", outerError);
+        console.error("Critical chat error:", outerError);
         setLiveChat(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m))
       }
     }
 
-    processMessage().catch(err => {
-      console.error("Error background message process:", err)
-      setLiveChat(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m))
-    })
+    processMessage();
   }
 
   const handleUploadToGallery = async (file: ProjectFile, category: string = 'MASTER') => {
@@ -1176,7 +1211,10 @@ export default function ProjectExecutionClient({
   }
 
   const handleUploadMedia = async (file: ProjectFile) => {
+    if (saveLockRef.current) return;
+    saveLockRef.current = true;
     setLoading(true)
+
     try {
       let location: any = null
       if ('geolocation' in navigator) {
@@ -1184,19 +1222,13 @@ export default function ProjectExecutionClient({
           navigator.geolocation.getCurrentPosition(
             pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
             () => resolve(null),
-            { timeout: 5000 } // Faster timeout
+            { timeout: 5000 }
           )
         })
       }
       
-      /* Session validation removed */
-
-      if (!location) {
-        console.warn("Subiendo a galería sin ubicación para no retrasar al operador.")
-      }
-
       const isOffline = !navigator.onLine
-      const isBase64 = typeof file.url === 'string' && file.url.startsWith('data:')
+      const syncId = `gallery-${project.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
       let processedUrl = file.url;
       if (isOffline && typeof file.url === 'string' && file.url.startsWith('blob:')) {
@@ -1209,7 +1241,7 @@ export default function ProjectExecutionClient({
              reader.readAsDataURL(blob);
            });
          } catch (e) {
-           console.warn('Failed to convert blob to base64 for gallery:', e);
+           console.warn('Failed to convert blob to base64:', e);
          }
       }
 
@@ -1221,26 +1253,32 @@ export default function ProjectExecutionClient({
         phaseId: activePhase
       }
 
-      // Explicit offline check
       if (isOffline) {
-        await db.outbox.add({
-          type: 'GALLERY_UPLOAD',
-          projectId: project.id,
-          payload: galleryPayload,
-          timestamp: Date.now(),
-          lat: location?.lat,
-          lng: location?.lng,
-          status: 'pending'
+        await db.transaction('rw', db.outbox, async () => {
+          await db.outbox.add({
+            type: 'GALLERY_UPLOAD',
+            projectId: project.id,
+            payload: galleryPayload,
+            timestamp: Date.now(),
+            lat: location?.lat,
+            lng: location?.lng,
+            status: 'pending',
+            syncId
+          })
         })
         setLoading(false)
         triggerBackgroundSync()
+        saveLockRef.current = false;
         return
       }
 
       try {
         const res = await fetch(`/api/projects/${project.id}/gallery`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-sync-id': syncId
+          },
           body: JSON.stringify({ 
             ...galleryPayload,
             lat: location?.lat,
@@ -1249,18 +1287,20 @@ export default function ProjectExecutionClient({
         })
         if (!res.ok) throw new Error('Refetch')
         if (typeof navigator !== 'undefined' && navigator.onLine) {
-       router.refresh()
-     }
+          router.refresh()
+        }
       } catch (err) {
-        // Silent fallback to outbox
-        await db.outbox.add({
-          type: 'GALLERY_UPLOAD',
-          projectId: project.id,
-          payload: galleryPayload,
-          timestamp: Date.now(),
-          lat: location?.lat,
-          lng: location?.lng,
-          status: 'pending'
+        await db.transaction('rw', db.outbox, async () => {
+          await db.outbox.add({
+            type: 'GALLERY_UPLOAD',
+            projectId: project.id,
+            payload: galleryPayload,
+            timestamp: Date.now(),
+            lat: location?.lat,
+            lng: location?.lng,
+            status: 'pending',
+            syncId
+          })
         })
         triggerBackgroundSync()
       }
@@ -1268,6 +1308,7 @@ export default function ProjectExecutionClient({
       console.error(e)
     } finally {
       setLoading(false)
+      saveLockRef.current = false;
     }
   }
 
@@ -1282,10 +1323,24 @@ export default function ProjectExecutionClient({
     }))
   }, [project?.gallery])
 
-  const combinedChat = [
-    ...liveChat,
-    ...pendingItems
-      .filter((item: any) => item.type === 'MESSAGE' || item.type === 'EXPENSE' || item.type === 'GALLERY_UPLOAD')
+  const combinedChat = useMemo(() => {
+    // 1. Filter live chat to ensure no gallery/media system messages leak into the feed
+    const cleanLiveChat = liveChat.filter((m: any) => {
+      const type = (m.type || 'TEXT').toUpperCase();
+      // Exclude specific gallery/media types that might be in the stream but belong elsewhere
+      if (type === 'GALLERY_UPLOAD' || type === 'MEDIA_UPLOAD') return false;
+      return true;
+    });
+
+    const list = [
+      ...cleanLiveChat.filter((m: any) => !pendingItems.some((p: any) => `temp-${p.syncId}` === m.id)),
+      ...pendingItems
+        .filter((item: any) => {
+          // Explicitly ONLY include chat-related types
+          const isChatType = item.type === 'MESSAGE' || item.type === 'EXPENSE';
+          const isNotGallery = item.type !== 'GALLERY_UPLOAD' && item.type !== 'MEDIA_UPLOAD';
+          return isChatType && isNotGallery;
+        })
       .map((item: any) => {
         // Build media array from either existing media or stored file preview
         let mediaArr: any[] = [];
@@ -1294,9 +1349,6 @@ export default function ProjectExecutionClient({
         } else if (item.payload.receiptPhoto) {
           // Handle EXPENSE type photo
           mediaArr = [{ url: item.payload.receiptPhoto, filename: 'recibo.jpg', mimeType: 'image/jpeg' }];
-        } else if (item.type === 'GALLERY_UPLOAD' && item.payload.url) {
-          // Handle GALLERY_UPLOAD type
-          mediaArr = [{ url: item.payload.url, filename: item.payload.filename || 'galeria.jpg', mimeType: item.payload.mimeType || 'image/jpeg' }];
         } else if (item.payload.previewBase64) {
           mediaArr = [{ url: item.payload.previewBase64, filename: item.payload.fileData?.name || 'Archivo', mimeType: item.payload.fileData?.type || 'image/jpeg' }];
         } else if (item.payload.fileData) {
@@ -1311,10 +1363,10 @@ export default function ProjectExecutionClient({
 
         // Determine content for special types
         let displayContent = item.payload.content || '';
-        if (item.type === 'EXPENSE') {
-          displayContent = `💰 Gasto: $${item.payload.amount} - ${item.payload.description}`;
-        } else if (item.type === 'GALLERY_UPLOAD') {
-          displayContent = `📷 Galería: ${item.payload.filename || 'Archivo nuevo'}`;
+        if (item.type === 'EXPENSE' || item.payload.type === 'EXPENSE_LOG') {
+          const amt = item.payload.amount || item.payload.extraData?.amount || '0.00';
+          const desc = item.payload.description || item.payload.extraData?.description || 'Gasto registrado';
+          displayContent = `💰 Gasto: $${amt} - ${desc}`;
         }
 
         return {
@@ -1334,7 +1386,9 @@ export default function ProjectExecutionClient({
           media: mediaArr
         };
       })
-  ].sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    ];
+    return list.sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [liveChat, pendingItems, userId])
 
   const filteredChat = combinedChat.filter((msg: any) => {
     // ALIGNED WITH ADMIN: If on General (activePhase === null), show ALL messages. 

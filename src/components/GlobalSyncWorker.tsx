@@ -5,6 +5,9 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { db } from '@/lib/db'
 
+// v261: Global throttle to prevent sync loops on component remounts (caused by router.refresh)
+let lastSyncExecution = 0;
+
 export default function GlobalSyncWorker() {
   const { data: session } = useSession()
   const router = useRouter()
@@ -156,6 +159,10 @@ export default function GlobalSyncWorker() {
             if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
               navigator.serviceWorker.controller.postMessage({ type: 'PRECACHE_URLS', urls: [shell] });
             }
+            // v263: Explicitly pre-fetch RSC payload for shells to satisfy SW fallback
+            const shellRscUrl = `${shell}?_rsc=1`; 
+            fetch(shellRscUrl, { priority: 'low', headers: { 'RSC': '1', 'Next-Router-Prefetch': '1' } }).catch(() => {});
+            
             await new Promise(r => setTimeout(r, 100)); 
           }
 
@@ -215,18 +222,26 @@ export default function GlobalSyncWorker() {
         }
       }
 
-      // 2. SYNC APPOINTMENTS (Calendar)
-      await new Promise(resolve => setTimeout(resolve, 500)); // Breathing room
+      // 3. SYNC USERS (Operators/Subcontractors for offline project creation)
+      await new Promise(resolve => setTimeout(resolve, 500));
       window.dispatchEvent(new CustomEvent('bulk-cache-sync-log', {
-        detail: { message: `Sincronizando agenda...` }
+        detail: { message: `Sincronizando equipo de trabajo...` }
       }))
-      const appRes = await fetch('/api/appointments', { priority: 'low' })
-      if (appRes.ok) {
-        const appointments = await appRes.json()
-        await db.appointmentsCache.bulkPut(appointments);
+      // v264: Fetch all relevant roles for offline selection
+      const userRes = await fetch('/api/users?roles=OPERATOR,SUBCONTRATISTA,ADMINISTRADORA,ADMIN', { priority: 'low' })
+      if (userRes.ok) {
+        const users = await userRes.json()
+        if (Array.isArray(users)) {
+           await db.usersCache.clear();
+           await db.usersCache.bulkPut(users.map(u => ({
+             id: u.id,
+             name: u.name,
+             role: u.role
+           })));
+        }
       }
 
-      // 3. SYNC QUOTES
+      // 4. SYNC QUOTES
       if (isAdmin) {
         await new Promise(resolve => setTimeout(resolve, 500));
         window.dispatchEvent(new CustomEvent('bulk-cache-sync-log', {
@@ -302,22 +317,34 @@ export default function GlobalSyncWorker() {
   const syncOutbox = async () => {
     if (typeof window === 'undefined' || !navigator.onLine || syncLock.current) return
     
-    // 1. Cross-tab lock (prevent multiple tabs syncing at once)
+    // 1. Cross-tab and remount lock
     const now = Date.now()
+    if (now - lastSyncExecution < 10000) {
+      // Throttle: don't sync more than once every 10 seconds per tab session
+      return
+    }
+
     const lastSyncStart = localStorage.getItem('global_sync_lock')
     if (lastSyncStart && (now - Number(lastSyncStart)) < 60000) {
       // A sync is likely running in another tab (60s safety timeout)
       return
     }
     localStorage.setItem('global_sync_lock', String(now))
+    lastSyncExecution = now;
 
     syncLock.current = true
     try {
-      const items = await db.outbox.where('status').anyOf(['pending', 'failed']).toArray()
+      const items = await db.outbox
+        .where('status')
+        .anyOf(['pending', 'failed'])
+        .toArray();
+      
       if (items.length === 0) {
         localStorage.removeItem('global_sync_lock')
         return
       }
+
+      console.log(`[Sync] Processing ${items.length} items from outbox...`);
 
       let hasSyncedAnything = false
 
@@ -325,6 +352,12 @@ export default function GlobalSyncWorker() {
         // Double check status hasn't changed by another process (sanity check)
         const currentItem = await db.outbox.get(item.id!)
         if (!currentItem || currentItem.status === 'syncing') continue
+
+        // v261: Prevent infinite retries for items that failed too many times
+        if ((currentItem.attempts || 0) >= 5) {
+          console.warn(`[Sync] Skipping item ${item.id} after 5 failed attempts`);
+          continue;
+        }
 
         try {
           await db.outbox.update(item.id!, { status: 'syncing' })
@@ -411,7 +444,13 @@ export default function GlobalSyncWorker() {
               const uploadResult = await uploadToBunnyClientSide(uploadFile, finalFilename, folder);
               
               if (finalPayload.media) {
-                finalPayload.media = { url: uploadResult.url, filename: finalFilename, mimeType: uploadResult.mimeType };
+                finalPayload.media = { 
+                  ...finalPayload.media,
+                  url: uploadResult.url, 
+                  filename: finalFilename, 
+                  mimeType: uploadResult.mimeType,
+                  type: uploadResult.type // Use the detected type (IMAGE, VIDEO, AUDIO)
+                };
               }
               if (item.type === 'GALLERY_UPLOAD') finalPayload.url = uploadResult.url;
               if (finalPayload.receiptPhoto) finalPayload.receiptPhoto = uploadResult.url;
@@ -485,7 +524,10 @@ export default function GlobalSyncWorker() {
 
              const res = await fetch(endpoint, {
                  method,
-                 headers: { 'Content-Type': 'application/json' },
+                 headers: { 
+                   'Content-Type': 'application/json',
+                   'x-sync-id': `sync-${item.id}-${item.timestamp}` 
+                 },
                  body: JSON.stringify({ 
                    ...finalPayload, 
                    lat: item.lat, 
@@ -502,16 +544,32 @@ export default function GlobalSyncWorker() {
                }
              } else {
                const status = res.status
-               // If unauthorized, go back to pending so it retries when user logs in
-               if (status === 401) {
+               if (status === 401 || status === 429) {
+                 // Unauthorized or rate limited -> keep pending and retry later
                  await db.outbox.update(item.id!, { status: 'pending' })
+               } else if (status >= 400 && status < 500) {
+                 // Permanent client error (400, 403, 404) -> Drop it so it doesn't loop forever
+                 console.warn(`[Sync] Descartando tarea inválida permanentemente: ${item.type} (Status ${status})`);
+                 await db.outbox.delete(item.id!)
                } else {
-                 await db.outbox.update(item.id!, { status: 'failed' })
+                 // Server errors (500+) -> mark as failed and increment attempts
+                 await db.outbox.update(item.id!, { 
+                   status: 'failed',
+                   attempts: (item.attempts || 0) + 1,
+                   lastAttemptAt: Date.now()
+                 })
                }
              }
           }
+          
+          // v261: Pacing delay to prevent server saturation and race conditions
+          await new Promise(r => setTimeout(r, 500));
        } catch (e) {
-          await db.outbox.update(item.id!, { status: 'pending' })
+          await db.outbox.update(item.id!, { 
+            status: 'pending',
+            attempts: (item.attempts || 0) + 1,
+            lastAttemptAt: Date.now()
+          })
        }
     }
 

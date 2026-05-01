@@ -132,7 +132,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'La fecha de fin debe ser posterior a la de inicio' }, { status: 400 })
     }
 
-    // PASO 1: Crear todas las citas primero
+    // Idempotency: Check if an identical appointment was created very recently (e.g., last 15 seconds)
+    // to prevent duplicates during flaky network retries
+    const recentDuplicate = await prisma.appointment.findFirst({
+      where: {
+        title,
+        startTime: start,
+        userId: targetUserIds[0], // Check at least for the first one
+        createdAt: { gte: new Date(Date.now() - 15000) }
+      }
+    });
+
+    if (recentDuplicate) {
+      console.log('[Idempotency] Found identical recent appointment, skipping creation.');
+      return NextResponse.json(recentDuplicate, { status: 201 });
+    }
+
+    // PASO 1: Crear todas las citas
     const results: any[] = []
     for (const targetUserId of targetUserIds) {
       const appointment = await prisma.appointment.create({
@@ -157,20 +173,22 @@ export async function POST(request: Request) {
       results.push(appointment)
     }
 
-    // Enviar notificaciones en segundo plano
-    const sendNotifications = async () => {
+    // PASO 2: Enviar notificaciones en segundo plano (No debe bloquear el éxito de la creación)
+    const sendNotificationsSafe = async () => {
       try {
         for (let i = 0; i < results.length; i++) {
           const appointment = results[i]
           const startLocale = formatTimeEcuador(startTime)
           
-          notifyUser(
-            appointment.userId,
-            '📌 Nueva Tarea Asignada',
-            `${title} — ${startLocale}`,
-            `URL_CALENDAR`,
-            `task-${appointment.id}`
-          ).catch(e => console.error('Push error:', e))
+          try {
+            await notifyUser(
+              appointment.userId,
+              '📌 Nueva Tarea Asignada',
+              `${title} — ${startLocale}`,
+              `URL_CALENDAR`,
+              `task-${appointment.id}`
+            )
+          } catch (e) { console.error('Push error:', e) }
 
           if (appointment.user?.phone) {
             try {
@@ -215,8 +233,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Iniciar notificaciones esperando a que terminen (necesario en serverless)
-    await sendNotifications()
+    await sendNotificationsSafe();
 
     return NextResponse.json(results.length === 1 ? results[0] : results, { status: 201 })
   } catch (error) {

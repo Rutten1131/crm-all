@@ -6,11 +6,32 @@ import { isAdmin } from '@/lib/rbac'
 import { notifyUser } from '@/lib/push'
 import { sendWhatsAppMessage } from '@/lib/whatsapp'
 
+// v262: Cache for idempotency keys to prevent duplicate team updates
+const processedSyncIds = new Map<string, { timestamp: number }>();
+
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Check idempotency header
+    const syncId = request.headers.get('x-sync-id');
+    if (syncId) {
+      if (processedSyncIds.has(syncId)) {
+        console.log(`[Idempotency] Skipping already processed team-sync-id: ${syncId}`);
+        return NextResponse.json({ success: true, message: 'Ya procesado (idempotente)' });
+      }
+      processedSyncIds.set(syncId, { timestamp: Date.now() });
+      
+      // Cleanup old keys (> 10 mins)
+      if (processedSyncIds.size > 1000) {
+        const now = Date.now();
+        for (const [key, val] of processedSyncIds.entries()) {
+          if (now - val.timestamp > 600000) processedSyncIds.delete(key);
+        }
+      }
+    }
+
     const session = await getServerSession(authOptions)
     
     if (!session) {

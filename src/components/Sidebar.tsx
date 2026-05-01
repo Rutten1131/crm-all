@@ -238,13 +238,26 @@ export default function Sidebar() {
   }
   if (status === 'loading' && !offlineUser) {
     return (
-      <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
-        <div className="sidebar-brand">
-          <img src="/logo.jpg" alt="Aquatech" className="sidebar-brand-logo" />
-          <div className="sidebar-brand-text">A<span>Q</span>UATECH</div>
-        </div>
-        <div style={{ padding: '20px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Cargando...</div>
-      </aside>
+      <>
+        <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
+          <div className="sidebar-brand">
+            <img src="/logo.jpg" alt="Aquatech" className="sidebar-brand-logo" />
+            <div className="sidebar-brand-text">A<span>Q</span>UATECH</div>
+          </div>
+          <div style={{ padding: '20px', color: 'var(--text-muted)', fontSize: '0.8rem', flex: 1 }}>Cargando...</div>
+          <div className="sidebar-footer">
+            <div className="sidebar-user" onClick={handleLogout} style={{ justifyContent: 'center' }}>
+               <span style={{ color: 'var(--danger)', fontSize: '0.85rem', fontWeight: 'bold' }}>Salir (Modo Seguro)</span>
+            </div>
+          </div>
+        </aside>
+        <nav className="mobile-nav">
+          <button className="mobile-nav-item" onClick={handleLogout} style={{ background: 'none', border: 'none', width: '100%' }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+            Salir (Modo Seguro)
+          </button>
+        </nav>
+      </>
     )
   }
 

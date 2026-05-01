@@ -189,6 +189,9 @@ export default function ProjectDetailClient({ project: initialProject, available
     [project?.id, idFromUrl]
   ) || []
 
+  // v262: Sincronización y cerrojos síncronos
+  const saveLockRef = useRef(false);
+
   const combinedChat = useMemo(() => {
     const base = chatMessages || [];
     const live = liveChat || [];
@@ -196,7 +199,7 @@ export default function ProjectDetailClient({ project: initialProject, available
       ...base,
       ...live,
       ...pendingItems
-      .filter((item: any) => item.type === 'MESSAGE' || item.type === 'MEDIA_UPLOAD')
+      .filter((item: any) => item.type === 'MESSAGE')
       .map((item: any) => {
         let mediaArr: any[] = [];
         if (item.payload.media) {
@@ -266,7 +269,6 @@ export default function ProjectDetailClient({ project: initialProject, available
   const [expenseImage, setExpenseImage] = useState<string | null>(null)
   const [expenseImagePreview, setExpenseImagePreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const sendLockRef = useRef(false)
 
   const masterGallery = useMemo(() => {
     // v260: Robust pending deletions identification (supporting both galleryId and legacy itemId)
@@ -576,7 +578,7 @@ export default function ProjectDetailClient({ project: initialProject, available
           return [...prev, ...uniqueNew]
         })
       }
-    }, 1000)
+    }, 3500)
 
     const handleFocus = () => {
        if (typeof navigator !== 'undefined' && !navigator.onLine) return
@@ -628,14 +630,17 @@ export default function ProjectDetailClient({ project: initialProject, available
     // Offline support
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       try {
-        await db.outbox.add({
-          type: 'GALLERY_DELETE',
-          projectId: project.id,
-          payload: { galleryId: itemId }, // v255: Consistente con GlobalSyncWorker
-          timestamp: Date.now(),
-          status: 'pending'
+        const syncId = `gallery-delete-${project.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        await db.transaction('rw', db.outbox, async () => {
+          await db.outbox.add({
+            type: 'GALLERY_DELETE',
+            projectId: project.id,
+            payload: { galleryId: itemId },
+            timestamp: Date.now(),
+            status: 'pending',
+            syncId
+          })
         })
-        // v260: Don't remove from state — let isPendingDelete overlay show the clock icon
         triggerBackgroundSync()
         return
       } catch (e) {
@@ -644,8 +649,10 @@ export default function ProjectDetailClient({ project: initialProject, available
     }
 
     try {
+      const syncId = `gallery-delete-${project.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       const resp = await fetch(`/api/projects/${project.id}/gallery/${itemId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'x-sync-id': syncId }
       })
       if (resp.ok) {
         setIsUpdatingStatus(false)
@@ -687,12 +694,16 @@ export default function ProjectDetailClient({ project: initialProject, available
 
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       try {
-        await db.outbox.add({
-          type: 'PROJECT_UPDATE',
-          projectId: project.id,
-          payload: fichaPayload,
-          timestamp: Date.now(),
-          status: 'pending'
+        const syncId = `project-update-${project.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        await db.transaction('rw', db.outbox, async () => {
+          await db.outbox.add({
+            type: 'PROJECT_UPDATE',
+            projectId: project.id,
+            payload: fichaPayload,
+            timestamp: Date.now(),
+            status: 'pending',
+            syncId
+          })
         })
         setIsEditingFicha(false)
         // Local state update
@@ -707,9 +718,13 @@ export default function ProjectDetailClient({ project: initialProject, available
     }
 
     try {
+      const syncId = `project-update-${project.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       const resp = await fetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-sync-id': syncId
+        },
         body: JSON.stringify(fichaPayload)
       })
 
@@ -817,25 +832,33 @@ export default function ProjectDetailClient({ project: initialProject, available
 
   const handleAddExpense = async () => {
     if (!expenseForm.amount || !expenseForm.description) return alert('Importe y descripción obligatorios')
+    
+    if (saveLockRef.current) return;
+    saveLockRef.current = true;
     setIsSavingExpense(true)
 
+    const syncId = `expense-${project.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
     const expensePayload = {
       amount: Number(expenseForm.amount),
       description: expenseForm.description,
       date: expenseForm.date,
       isNote: expenseForm.isNote,
-      category: 'OTRO'
+      category: 'OTRO',
+      receiptUrl: expenseImage // v263: Support for receipt image in admin view
     }
 
     // Offline support
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       try {
-        await db.outbox.add({
-          type: 'EXPENSE',
-          projectId: project?.id || 0,
-          payload: expensePayload,
-          timestamp: Date.now(),
-          status: 'pending'
+        await db.transaction('rw', db.outbox, async () => {
+          await db.outbox.add({
+            type: 'EXPENSE',
+            projectId: project?.id || 0,
+            payload: expensePayload,
+            timestamp: Date.now(),
+            status: 'pending',
+            syncId
+          })
         })
         setExpenseForm({
           amount: '',
@@ -843,20 +866,26 @@ export default function ProjectDetailClient({ project: initialProject, available
           isNote: false,
           date: new Date().toISOString().split('T')[0]
         })
+        setExpenseImage(null);
+        setExpenseImagePreview(null);
         setIsExpenseModalOpen(false)
-        triggerBackgroundSync() // v261: Ensure SW wakes up for expense sync
+        triggerBackgroundSync()
         return
       } catch (e) {
         console.error('Error saving offline expense:', e)
       } finally {
         setIsSavingExpense(false)
+        saveLockRef.current = false;
       }
     }
 
     try {
       const resp = await fetch(`/api/projects/${project.id}/expenses`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-sync-id': syncId
+        },
         body: JSON.stringify(expensePayload)
       })
       if (resp.ok) {
@@ -866,11 +895,13 @@ export default function ProjectDetailClient({ project: initialProject, available
           isNote: false,
           date: new Date().toISOString().split('T')[0]
         })
+        setExpenseImage(null);
+        setExpenseImagePreview(null);
         setIsExpenseModalOpen(false)
         startTransition(() => {
           if (typeof navigator !== 'undefined' && navigator.onLine) {
-          router.refresh()
-        }
+            router.refresh()
+          }
         })
       } else {
         const err = await resp.json()
@@ -880,6 +911,7 @@ export default function ProjectDetailClient({ project: initialProject, available
       console.error(e)
     } finally {
       setIsSavingExpense(false)
+      saveLockRef.current = false;
     }
   }
  
@@ -920,7 +952,11 @@ export default function ProjectDetailClient({ project: initialProject, available
   }
 
   const handleUploadToGallery = async (file: ProjectFile, category: string = 'MASTER') => {
+    if (saveLockRef.current) return;
+    saveLockRef.current = true;
     setIsUploading(true)
+
+    const syncId = `gallery-upload-${project.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
     // Offline support
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -940,16 +976,20 @@ export default function ProjectDetailClient({ project: initialProject, available
              }
           }
 
-          await db.outbox.add({
-             type: 'GALLERY_UPLOAD',
-             projectId: project.id,
-             payload: { ...file, url: processedUrl, base64: processedUrl, category },
-             timestamp: Date.now(),
-             status: 'pending'
+          await db.transaction('rw', db.outbox, async () => {
+            await db.outbox.add({
+               type: 'GALLERY_UPLOAD',
+               projectId: project.id,
+               payload: { ...file, url: processedUrl, base64: processedUrl, category },
+               timestamp: Date.now(),
+               status: 'pending',
+               syncId
+            })
           })
           
           setIsUploading(false)
-          triggerBackgroundSync() // v261: Critical for media/gallery background sync
+          triggerBackgroundSync()
+          saveLockRef.current = false;
           return
        } catch (e) {
           console.error('Error saving offline gallery item:', e)
@@ -957,22 +997,31 @@ export default function ProjectDetailClient({ project: initialProject, available
     }
 
     try {
-      // For online mode, we don't manually setGallery because the Service Worker 
-      // or the list polling/refresh will handle the state update once the upload is synced.
-      // This PREVENTS THE DOUBLE UPLOAD BUG (one local, one from synced fetch).
       await fetch(`/api/projects/${project.id}/gallery`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-sync-id': syncId
+        },
         body: JSON.stringify({ ...file, category })
       })
-      
-      // We don't call setGallery here anymore. 
-      // Instead we rely on the router.refresh() that might happen elsewhere or 
-      // the fact that the Service Worker is proxying these requests.
     } catch (e) {
       console.error('Error uploading to gallery:', e)
+      // Fallback to outbox on error
+      await db.transaction('rw', db.outbox, async () => {
+        await db.outbox.add({
+           type: 'GALLERY_UPLOAD',
+           projectId: project.id,
+           payload: { ...file, category },
+           timestamp: Date.now(),
+           status: 'pending',
+           syncId
+        })
+      })
+      triggerBackgroundSync()
     } finally {
       setIsUploading(false)
+      saveLockRef.current = false;
     }
   }
 
@@ -1088,19 +1137,25 @@ export default function ProjectDetailClient({ project: initialProject, available
   }
 
   const handleSaveTeam = async () => {
+    // v262: Bloqueo síncrono instantáneo
+    if (saveLockRef.current) return;
+    saveLockRef.current = true;
+    
     setIsSavingTeam(true)
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        await db.outbox.add({
-          projectId: project.id,
-          type: 'TEAM_UPDATE',
-          payload: { operatorIds: selectedTeam },
-          status: 'pending',
-          timestamp: Date.now()
-        })
+        // v262: Transacción atómica para evitar duplicados en outbox
+        await db.transaction('rw', db.outbox, async () => {
+          await db.outbox.add({
+            projectId: project.id,
+            type: 'TEAM_UPDATE',
+            payload: { operatorIds: selectedTeam },
+            status: 'pending',
+            timestamp: Date.now()
+          })
+        });
         
         // --- LOCAL FEEDBACK ---
-        // Update localProject state so the UI reflects the change immediately
         const newTeam = availableOperators
           .filter((op: any) => selectedTeam.includes(op.id))
           .map((op: any) => ({ user: op }));
@@ -1108,21 +1163,23 @@ export default function ProjectDetailClient({ project: initialProject, available
         setLocalProject((prev: any) => ({
           ...prev,
           team: newTeam,
-          _pendingTeamSync: true // Visual flag
+          _pendingTeamSync: true
         }));
         
         setIsEditingTeam(false)
-        triggerBackgroundSync() // v261: Ensure SW wakes up for background sync
+        triggerBackgroundSync()
         return
       }
 
       await fetch(`/api/projects/${project.id}/team`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-sync-id': `team-update-${project.id}-${Date.now()}` // v262: Idempotency Key
+        },
         body: JSON.stringify({ operatorIds: selectedTeam })
       })
       
-      // Update local state when online too for consistency before refresh
       const newTeam = availableOperators
         .filter((op: any) => selectedTeam.includes(op.id))
         .map((op: any) => ({ user: op }));
@@ -1135,9 +1192,12 @@ export default function ProjectDetailClient({ project: initialProject, available
       
       setIsEditingTeam(false)
     } catch (e) {
+      console.error('Error guardando equipo:', e);
       alert('Error guardando equipo')
     } finally {
       setIsSavingTeam(false)
+      // Liberar el bloqueo con un pequeño retraso para evitar rebotes
+      setTimeout(() => { saveLockRef.current = false; }, 500);
     }
   }
 
@@ -1164,7 +1224,6 @@ export default function ProjectDetailClient({ project: initialProject, available
       return await resp.json()
     } catch (e) {
       console.error(e)
-      alert('Error descargando datos completos para el reporte')
       return null
     }
   }
@@ -1173,8 +1232,7 @@ export default function ProjectDetailClient({ project: initialProject, available
   const handleSendMessage = async (e?: React.FormEvent, customMedia?: { blob: Blob, type: 'audio' | 'video', transcription: string }) => {
     if (e) e.preventDefault()
     if (!message.trim() && !customMedia) return
-    setIsSending(true)
-
+    
     try {
       let payload: any = {
         content: customMedia ? customMedia.transcription : message,
@@ -1183,7 +1241,6 @@ export default function ProjectDetailClient({ project: initialProject, available
       }
 
       if (customMedia) {
-        // Convert blob to base64
         const reader = new FileReader()
         const base64: string = await new Promise((resolve) => {
           reader.onloadend = () => resolve(reader.result as string)
@@ -1200,26 +1257,31 @@ export default function ProjectDetailClient({ project: initialProject, available
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
          try {
             let offlinePayload = { ...payload }
-            await db.outbox.add({
-               type: 'MESSAGE',
-               projectId: project.id,
-               payload: offlinePayload,
-               timestamp: Date.now(),
-               status: 'pending'
-            })
+            // v262: Transacción atómica
+            await db.transaction('rw', db.outbox, async () => {
+              await db.outbox.add({
+                 type: 'MESSAGE',
+                 projectId: project.id,
+                 payload: offlinePayload,
+                 timestamp: Date.now(),
+                 status: 'pending'
+              })
+            });
             setMessage('')
             setShowMediaCapture(null)
             return
          } catch (e) {
             console.error('Error saving offline message:', e)
-         } finally {
-            setIsSending(false)
          }
+         return;
       }
 
       const res = await fetch(`/api/projects/${project.id}/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-sync-id': `chat-msg-${project.id}-${Date.now()}` // v262: Idempotency Key
+        },
         body: JSON.stringify(payload)
       })
 
@@ -1235,22 +1297,16 @@ export default function ProjectDetailClient({ project: initialProject, available
           }]
         })
         setMessage('')
-         setShowMediaCapture(null)
+        setShowMediaCapture(null)
       }
     } catch (error) {
       console.error('Error sending message:', error)
       alert('Error al enviar el mensaje')
-    } finally {
-      setIsSending(false)
-      sendLockRef.current = false
     }
   }
 
   // Handler for ProjectChatUnified component
    const handleChatUnifiedSend = async (content: string, type: string, extraData?: any) => {
-    if (isSending || sendLockRef.current) return
-    sendLockRef.current = true
-    setIsSending(true)
     console.log('Sending message:', { content, type, extraData }) // Debug log
     try {
       let payload: any = {
@@ -1303,30 +1359,34 @@ export default function ProjectDetailClient({ project: initialProject, available
         }
       }
 
-      // Ensure phaseId from extraData (selected in chat) overrides the activePhase if present
-      if (extraData?.phaseId) {
-        payload.phaseId = extraData.phaseId;
-      }
-      
-      // GPS coords - Automatic tracking for Admins too
-      let location: any = null
-      if (extraData?.lat && extraData?.lng) {
-        location = { lat: extraData.lat, lng: extraData.lng }
-      } else if ('geolocation' in navigator) {
-        try {
-          location = await new Promise((resolve) => {
-            navigator.geolocation.getCurrentPosition(
-              pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-              () => resolve(null),
-              { enableHighAccuracy: true, timeout: 5000 }
-            )
-          })
-        } catch (e) {
-          console.warn('Geolocation failed for admin:', e)
+      // v262: Atomic Outbox storage for Chat Unified
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        if (extraData?.file && !payload.media?.base64) {
+           const base64 = await blobToBase64(extraData.file);
+           payload.media = {
+             base64,
+             filename: extraData.file.name,
+             mimeType: extraData.file.type
+           };
         }
+
+        await db.transaction('rw', db.outbox, async () => {
+          await db.outbox.add({
+             type: 'MESSAGE',
+             projectId: project.id,
+             payload: {
+               ...payload,
+               lat: undefined,
+               lng: undefined,
+             },
+             timestamp: Date.now(),
+             status: 'pending'
+          })
+        });
+        return;
       }
 
-      // --- OPTIMISTIC UI UPDATE ---
+      // --- OPTIMISTIC UI UPDATE (Only when Online) ---
       const tempId = `temp-${Date.now()}-${Math.random()}`
       setLiveChat((prev: any[]) => [
         ...prev,
@@ -1343,34 +1403,17 @@ export default function ProjectDetailClient({ project: initialProject, available
         }
       ])
 
-      // Offline interceptor for Unified Chat
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-         try {
-            await db.outbox.add({
-               type: 'MESSAGE',
-               projectId: project.id,
-               payload,
-               timestamp: Date.now(),
-               lat: location?.lat,
-               lng: location?.lng,
-               status: 'pending'
-            })
-            setLiveChat(prev => prev.filter(m => m.id !== tempId))
-            return
-         } catch (e) {
-            console.error('Error saving offline unified message:', e)
-         } finally {
-            setIsSending(false)
-         }
-      }
-
+      // Online: Send to Server
       const res = await fetch(`/api/projects/${project.id}/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-sync-id': `chat-unified-${project.id}-${Date.now()}` // Idempotency Key
+        },
         body: JSON.stringify({
           ...payload,
-          lat: location?.lat,
-          lng: location?.lng,
+          lat: undefined,
+          lng: undefined,
           extraData: payload.extraData ? (typeof payload.extraData === 'string' ? payload.extraData : JSON.stringify(payload.extraData)) : undefined
         })
       })
@@ -1407,9 +1450,6 @@ export default function ProjectDetailClient({ project: initialProject, available
     } catch (error) {
       console.error('Error sending message:', error)
       alert('Error al enviar el mensaje')
-    } finally {
-      setIsSending(false)
-      sendLockRef.current = false
     }
   }
 

@@ -177,40 +177,51 @@ export default function ProjectCreationWizard({ panelBase = '/admin/proyectos' }
   const [showGallery, setShowGallery] = useState(false)
   const [showCameraCapture, setShowCameraCapture] = useState(false)
 
-  const fetchTeam = useCallback(() => {
-    if (status !== 'authenticated') return;
-    
-    // Use ONLY roles that exist in the Prisma enum to avoid 500 errors
-    fetch('/api/users?roles=OPERATOR,SUBCONTRATISTA')
-      .then(r => r.json())
-      .then(data => { 
-        if (Array.isArray(data)) {
-          const filtered = data.filter(u => 
-            u.role === 'OPERATOR' || 
-            u.role === 'OPERADOR' || 
-            u.role === 'SUBCONTRATISTA'
-          )
-          setAvailableTeam(filtered)
-        }
-      })
-      .catch(console.error)
-  }, [status])
-
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-
-    // Fetch clients
-    const loadClients = async () => {
-      try {
-        const r = await fetch('/api/clients')
+  const fetchTeam = useCallback(async () => {
+    // v264: Robust user fetching with offline fallback
+    try {
+      if (navigator.onLine) {
+        const r = await fetch('/api/users?roles=OPERATOR,SUBCONTRATISTA,ADMINISTRADORA,ADMIN')
         if (r.ok) {
           const data = await r.json()
           if (Array.isArray(data)) {
-            setClients(data)
-            await db.clientsCache.clear()
-            await db.clientsCache.bulkPut(data)
+            setAvailableTeam(data)
+            // Silently update cache
+            await db.usersCache.clear()
+            await db.usersCache.bulkPut(data.map(u => ({ id: u.id, name: u.name, role: u.role })))
+            return
           }
         }
+      }
+      
+      // Fallback to cache (offline or fetch failed)
+      const cached = await db.usersCache.toArray()
+      if (cached.length > 0) {
+        setAvailableTeam(cached)
+      }
+    } catch (e) {
+      const cached = await db.usersCache.toArray()
+      if (cached.length > 0) setAvailableTeam(cached)
+    }
+  }, [setAvailableTeam])
+
+  useEffect(() => {
+    // Fetch clients
+    const loadClients = async () => {
+      try {
+        if (navigator.onLine) {
+          const r = await fetch('/api/clients')
+          if (r.ok) {
+            const data = await r.json()
+            if (Array.isArray(data)) {
+              setClients(data)
+              await db.clientsCache.clear()
+              await db.clientsCache.bulkPut(data)
+              return
+            }
+          }
+        }
+        throw new Error('Offline')
       } catch (e) {
         const cached = await db.clientsCache.toArray()
         if (cached.length > 0) setClients(cached)
@@ -220,15 +231,19 @@ export default function ProjectCreationWizard({ panelBase = '/admin/proyectos' }
     // Fetch materials
     const loadMaterials = async () => {
       try {
-        const r = await fetch('/api/materials')
-        if (r.ok) {
-          const data = await r.json()
-          if (Array.isArray(data)) {
-            setMaterials(data)
-            await db.materialsCache.clear()
-            await db.materialsCache.bulkPut(data)
+        if (navigator.onLine) {
+          const r = await fetch('/api/materials')
+          if (r.ok) {
+            const data = await r.json()
+            if (Array.isArray(data)) {
+              setMaterials(data)
+              await db.materialsCache.clear()
+              await db.materialsCache.bulkPut(data)
+              return
+            }
           }
         }
+        throw new Error('Offline')
       } catch (e) {
         const cached = await db.materialsCache.toArray()
         if (cached.length > 0) setMaterials(cached)
@@ -238,7 +253,7 @@ export default function ProjectCreationWizard({ panelBase = '/admin/proyectos' }
     loadClients()
     loadMaterials()
     fetchTeam()
-  }, [status, fetchTeam])
+  }, [fetchTeam])
 
   const handleNext = () => {
     if (step === 1) {

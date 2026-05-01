@@ -7,8 +7,16 @@ import { getLocalNow, forceEcuadorTZ } from '@/lib/date-utils'
 import { isAdmin } from '@/lib/rbac'
 import { notifyProjectTeam } from '@/lib/push'
 
+// Idempotency cache
+const processedSyncIds = new Map<string, any>();
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const syncId = req.headers.get('x-sync-id');
+    if (syncId && processedSyncIds.has(syncId)) {
+      console.log('[Idempotency] Skipping already processed expense:', syncId);
+      return NextResponse.json(processedSyncIds.get(syncId));
+    }
     const { id } = await params
     const session = await getServerSession(authOptions)
     if (!session || !session.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -143,6 +151,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         `/admin/operador/proyecto/${projectId}?view=records`,
         `expense-${projectId}`
       )
+    }
+
+    if (syncId) {
+      processedSyncIds.set(syncId, expense);
+      // TTL logic: remove after 1 hour
+      setTimeout(() => processedSyncIds.delete(syncId), 60 * 60 * 1000);
     }
 
     return NextResponse.json(expense)

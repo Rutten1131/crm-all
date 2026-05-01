@@ -29,11 +29,19 @@ export async function GET(
   }
 }
 
+// Idempotency cache
+const processedSyncIds = new Map<string, any>();
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const syncId = request.headers.get('x-sync-id');
+    if (syncId && processedSyncIds.has(syncId)) {
+      console.log('[Idempotency] Skipping already processed gallery upload:', syncId);
+      return NextResponse.json(processedSyncIds.get(syncId));
+    }
     const session = await getServerSession(authOptions)
     if (!session || !session.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -79,6 +87,11 @@ export async function POST(
         createdAt: createdAt ? new Date(createdAt) : undefined
       }
     })
+
+    if (syncId) {
+      processedSyncIds.set(syncId, newItem);
+      setTimeout(() => processedSyncIds.delete(syncId), 60 * 60 * 1000);
+    }
 
     return NextResponse.json(newItem, { status: 201 })
   } catch (error) {

@@ -55,9 +55,31 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
+// v262: Cache for idempotency keys to prevent duplicate chat messages
+const processedSyncIds = new Map<string, { timestamp: number }>();
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
+    
+    // Check idempotency header
+    const syncId = req.headers.get('x-sync-id');
+    if (syncId) {
+      if (processedSyncIds.has(syncId)) {
+        console.log(`[Idempotency] Skipping already processed chat-sync-id: ${syncId}`);
+        return NextResponse.json({ success: true, message: 'Mensaje ya procesado' });
+      }
+      processedSyncIds.set(syncId, { timestamp: Date.now() });
+      
+      // Cleanup old keys (> 10 mins)
+      if (processedSyncIds.size > 1000) {
+        const now = Date.now();
+        for (const [key, val] of processedSyncIds.entries()) {
+          if (now - val.timestamp > 600000) processedSyncIds.delete(key);
+        }
+      }
+    }
+
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       

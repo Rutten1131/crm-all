@@ -88,7 +88,7 @@ export default function ProjectDetailClient({ project: initialProject, available
 
       // Check if we need to recover from cache (either offline OR we got the wrong shell props OR server failed)
       // v244: Aggressive recovery for Admin mobile experience
-      const needsCacheRecovery = (!initialProject || Number(initialProject?.id) !== idFromUrl) && idFromUrl > 0;
+      const needsCacheRecovery = (!initialProject || Number(initialProject?.id) !== idFromUrl || initialProject?.isSkeleton) && idFromUrl > 0;
 
       if (needsCacheRecovery) {
         setIsSyncingOffline(true);

@@ -107,7 +107,7 @@ export class OfflineDatabase extends Dexie {
       chatCache: 'projectId',
       dashboardCache: 'id'
     });
-    this.version(12).stores({
+    this.version(11).stores({
       outbox: '++id, projectId, status, timestamp, type',
       auth: 'id',
       authShadow: 'id',
@@ -118,8 +118,7 @@ export class OfflineDatabase extends Dexie {
       appointmentsCache: 'id, projectId',
       chatCache: 'projectId',
       dashboardCache: 'id',
-      cacheMetadata: 'id',
-      mediaStorage: '++id, outboxId' // v258: Store for Blobs/Files
+      cacheMetadata: 'id'
     });
   }
 }

@@ -79,6 +79,7 @@ export default function GlobalSyncWorker() {
           const mergedProject = {
             ...(existing || {}),
             ...p,
+            isSkeleton: false,
             lastAccessedAt: Date.now()
           };
           
@@ -129,9 +130,10 @@ export default function GlobalSyncWorker() {
           // 1. Universal Shells (Crucial for offline fallback)
           const shells = ['/admin/proyectos/offline-shell', '/admin/operador/proyecto/offline-shell'];
           for (const shell of shells) {
-            router.prefetch(shell);
-            fetch(shell, { priority: 'low', headers: { 'Accept': 'text/html' } }).catch(() => {});
-            await new Promise(r => setTimeout(r, 100)); // Optimized pacing
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({ type: 'PRECACHE_URLS', urls: [shell] });
+            }
+            await new Promise(r => setTimeout(r, 100)); 
           }
 
           // 2. Main Sections (Role-Aware)
@@ -140,14 +142,14 @@ export default function GlobalSyncWorker() {
             : ['/admin/operador', '/admin/inventario', '/admin/cotizaciones'];
 
           for (const section of sections) {
-            router.prefetch(section);
-            // Fetch HTML Shell
-            fetch(section, { priority: 'low', headers: { 'Accept': 'text/html' } }).catch(() => {});
-            // Fetch RSC Payload
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({ type: 'PRECACHE_URLS', urls: [section] });
+            }
+            // Fetch RSC Payload (SW warm-cache only handles HTML)
             const rscUrl = section.includes('?') ? `${section}&_rsc=prefetch` : `${section}?_rsc=prefetch`;
             fetch(rscUrl, { priority: 'low', headers: { 'RSC': '1', 'Next-Router-Prefetch': '1' } }).catch(() => {});
 
-            await new Promise(resolve => setTimeout(resolve, 300)); // Optimized pacing
+            await new Promise(resolve => setTimeout(resolve, 300)); 
           }
 
           // 3. Prioritize Top 30 Recent Projects (Full Offline Coverage)
@@ -172,10 +174,16 @@ export default function GlobalSyncWorker() {
               detail: { message: msg }
             }))
             
-            router.prefetch(projectPath);
-            // Fetch HTML Shell
-            fetch(projectPath, { priority: 'low', headers: { 'Accept': 'text/html' } }).catch(() => {});
-            // Fetch RSC Payload
+            // v258: Use the Service Worker's Warm-cache logic (PRECACHE_URLS)
+            // This is crucial because it extracts and caches JS chunks, not just the HTML.
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'PRECACHE_URLS',
+                urls: [projectPath]
+              });
+            }
+
+            // Fetch RSC Payload manually (SW warm-cache only handles HTML)
             const rscUrl = `${projectPath}?_rsc=prefetch`;
             fetch(rscUrl, { priority: 'low', headers: { 'RSC': '1', 'Next-Router-Prefetch': '1' } }).catch(() => {});
             
@@ -513,7 +521,7 @@ export default function GlobalSyncWorker() {
         if (navigator.onLine) {
             startBulkSync() 
         }
-    }, 10 * 60 * 1000) 
+    }, 30 * 60 * 1000) // v259: Increased to 30 mins to match freshness window
 
     // Keep-Alive Ping para base de datos (StackCP)
     const keepAliveInterval = setInterval(() => {

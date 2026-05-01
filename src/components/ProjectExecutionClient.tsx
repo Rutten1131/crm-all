@@ -173,7 +173,7 @@ export default function ProjectExecutionClient({
     if (!mounted || !idFromUrl || idFromUrl <= 0) return;
     if (hasRecoveredRef.current) return;
 
-    const needsCacheRecovery = !project || Number(project?.id) !== idFromUrl;
+    const needsCacheRecovery = !project || Number(project?.id) !== idFromUrl || project?.isSkeleton;
     if (!needsCacheRecovery) return;
 
     setIsSyncingOffline(true);

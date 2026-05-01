@@ -17,6 +17,7 @@ const PRE_CACHE = [
   '/app-start.html',
   '/manifest.json',
   '/favicon.ico',
+  '/favicon.png',
   '/logo.jpg',
   '/cotizacion.jpg'
 ];
@@ -660,6 +661,14 @@ async function networkFirst(request, cacheName, timeout = 10000) {
          status: 200, 
          headers: { 'Content-Type': 'application/json' }
        });
+    }
+
+    // v254: Clean fallback for images/favicons to avoid console ERR_FAILED
+    if (request.destination === 'image' || isStaticAsset(url.pathname)) {
+      return new Response(
+        Uint8Array.from(atob('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), c => c.charCodeAt(0)),
+        { status: 200, headers: { 'Content-Type': 'image/gif' } }
+      );
     }
     
     return Response.error();

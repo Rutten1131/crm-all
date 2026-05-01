@@ -24,6 +24,7 @@ function OperatorOfflineShellContent() {
 
   const dummyProject = {
     id: idFromUrl,
+    isSkeleton: true,
     title: 'Cargando Proyecto Offline...',
     status: '',
     type: '',

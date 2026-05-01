@@ -119,13 +119,13 @@ export default function ProjectChatUnified({
           })
         }
       })
-      if (m.type === 'EXPENSE_LOG' || m.type === 'NOTE') {
+      if (m.type === 'EXPENSE_LOG' || m.type === 'NOTE' || m.type === 'EXPENSE') {
         list.push({
           id: `msg-exp-${m.id}`,
-          filename: m.content || 'Gasto',
-          url: m.extraData?.receiptUrl || m.extraData?.url || '',
+          filename: m.content || (m.extraData?.description) || 'Gasto',
+          url: m.extraData?.receiptUrl || m.extraData?.url || m.extraData?.receiptPhoto || '',
           type: 'EXPENSES',
-          amount: m.extraData?.amount,
+          amount: m.extraData?.amount || m.extraData?.total || m.amount,
           timestamp: m.createdAt || m.timestamp,
           sender: m.userName || m.senderName || 'Sistema'
         })
@@ -753,21 +753,24 @@ export default function ProjectChatUnified({
                 <button onClick={() => setShowFilesBrowser(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.9rem', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
               </div>
 
-              {/* Filters */}
-              <div style={{ padding: '10px 20px', display: 'flex', gap: '8px', overflowX: 'auto', whiteSpace: 'nowrap', borderBottom: '1px solid rgba(255,255,255,0.05)' }} className="hide-scrollbar">
+              <div style={{ padding: '12px 20px', display: 'flex', gap: '10px', overflowX: 'auto', whiteSpace: 'nowrap', borderBottom: '1px solid rgba(255,255,255,0.05)', backgroundColor: 'rgba(255,255,255,0.02)', minHeight: '52px', alignItems: 'center' }} className="hide-scrollbar">
                 {['ALL', 'IMAGES', 'VIDEOS', 'AUDIOS', 'DOCS', 'EXPENSES'].map(f => (
                   <button
                     key={f}
                     onClick={() => setFilesFilter(f as any)}
                     style={{
-                      padding: '6px 14px',
-                      borderRadius: '20px',
-                      fontSize: '0.75rem',
-                      backgroundColor: filesFilter === f ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
-                      color: filesFilter === f ? 'white' : 'var(--text-muted)',
+                      padding: '8px 16px',
+                      borderRadius: '22px',
+                      fontSize: '0.8rem',
+                      fontWeight: '600',
+                      backgroundColor: filesFilter === f ? 'var(--primary)' : 'rgba(255,255,255,0.08)',
+                      color: 'white',
                       border: 'none',
                       cursor: 'pointer',
-                      flexShrink: 0
+                      flexShrink: 0,
+                      minWidth: 'fit-content',
+                      boxShadow: filesFilter === f ? '0 4px 12px rgba(56,189,248,0.3)' : 'none',
+                      transition: 'all 0.2s ease'
                     }}
                   >
                     {f === 'ALL' ? 'Todo' : f === 'IMAGES' ? 'Fotos' : f === 'VIDEOS' ? 'Videos' : f === 'AUDIOS' ? 'Audio' : f === 'DOCS' ? 'Docs' : 'Gastos'}
@@ -834,17 +837,28 @@ export default function ProjectChatUnified({
                            <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>Audio</span>
                         </div>
                       ) : media.type === 'EXPENSES' ? (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: '10px', background: 'var(--bg-card)', position: 'relative' }}>
-                          <span style={{ fontSize: '1rem', fontWeight: 'bold', color: '#10b981', zIndex: 2, textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
-                            ${Number(media.amount || 0).toFixed(2)}
-                          </span>
-                          <span style={{ fontSize: '0.65rem', flex: 1, overflow: 'hidden', zIndex: 2, textShadow: '0 1px 2px rgba(0,0,0,0.8)', color: 'white' }}>
-                            {media.filename}
-                          </span>
-                          {media.url && (
-                            <div style={{ position: 'absolute', inset: 0, opacity: 0.5, zIndex: 1 }}>
-                              <img src={media.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Recibo"/>
+                        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: '12px', background: '#1a2226', position: 'relative', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                          <div style={{ zIndex: 2, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span style={{ fontSize: '1.1rem', fontWeight: '800', color: '#10b981', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
+                              ${Number(media.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: 'white', fontWeight: '500', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textShadow: '0 1px 3px rgba(0,0,0,0.9)', lineHeight: '1.2' }}>
+                              {media.filename}
+                            </span>
+                            <div style={{ marginTop: '4px', fontSize: '0.6rem', color: 'rgba(255,255,255,0.6)', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
+                              {media.sender}
                             </div>
+                          </div>
+                          {media.url && (
+                            <div style={{ position: 'absolute', inset: 0, opacity: 0.45, zIndex: 1 }}>
+                              <img src={media.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Recibo"/>
+                              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.8) 100%)' }}></div>
+                            </div>
+                          )}
+                          {!media.url && (
+                             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.1, zIndex: 1 }}>
+                               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                             </div>
                           )}
                         </div>
                       ) : (

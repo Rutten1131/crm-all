@@ -2143,7 +2143,7 @@ export default function ProjectExecutionClient({
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{masterGallery.length} Archivos Oficiales</span>
                     </div>
                     
-                     <div style={{ paddingBottom: '15px', display: 'flex', gap: '8px', overflowX: 'auto' }} className="hide-scrollbar">
+                     <div style={{ paddingBottom: '15px', display: 'flex', gap: '10px', overflowX: 'auto', minHeight: '42px', alignItems: 'center' }} className="hide-scrollbar">
                         {[
                           { id: 'ALL', label: 'Todo' },
                           { id: 'IMAGES', label: 'Fotos' },
@@ -2155,14 +2155,17 @@ export default function ProjectExecutionClient({
                             key={f.id}
                             onClick={() => setGalleryFilter(f.id as any)}
                             style={{ 
-                              padding: '4px 12px', 
+                              padding: '6px 14px', 
                               borderRadius: '20px', 
                               border: 'none', 
                               background: galleryFilter === f.id ? 'var(--primary)' : 'rgba(255,255,255,0.08)',
                               color: 'white',
                               fontSize: '0.75rem',
+                              fontWeight: '600',
                               cursor: 'pointer',
-                              whiteSpace: 'nowrap'
+                              whiteSpace: 'nowrap',
+                              flexShrink: 0,
+                              minWidth: 'fit-content'
                             }}
                           >
                             {f.label}
@@ -2805,9 +2808,10 @@ export default function ProjectExecutionClient({
                   src={selectedPreviewImage.url}
                   controls 
                   autoPlay 
+                  muted
                   playsInline
-                  preload="metadata"
-                  style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '8px', outline: 'none' }}
+                  preload="auto"
+                  style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '8px', outline: 'none', boxShadow: '0 10px 40px rgba(0,0,0,0.8)' }}
                   onClick={(e) => e.stopPropagation()}
                 >
                   Tu navegador no soporta el video.

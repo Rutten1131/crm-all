@@ -463,6 +463,9 @@ export default function GlobalSyncWorker() {
              if (res.ok) {
                await db.outbox.delete(item.id!)
                hasSyncedAnything = true
+               if (typeof window !== 'undefined') {
+                 window.dispatchEvent(new CustomEvent('sync-success', { detail: { type: item.type, projectId: item.projectId } }))
+               }
              } else {
                const status = res.status
                // If unauthorized, go back to pending so it retries when user logs in

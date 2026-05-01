@@ -879,9 +879,18 @@ async function processOutboxSync() {
   }
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['outbox'], 'readwrite');
-    const outboxStore = transaction.objectStore('outbox');
-    const getAllRequest = outboxStore.getAll();
+    // Evitar race condition: Si la app está abierta, GlobalSyncWorker se encargará
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      const isAppOpen = windowClients.some(client => client.visibilityState === 'visible' || client.focused);
+      if (isAppOpen) {
+        console.log('[SW] Pestaña de Aquatech activa detectada. Abortando SW sync para evitar conflictos con GlobalSyncWorker.');
+        resolve();
+        return;
+      }
+
+      const transaction = db.transaction(['outbox'], 'readwrite');
+      const outboxStore = transaction.objectStore('outbox');
+      const getAllRequest = outboxStore.getAll();
 
     getAllRequest.onsuccess = async () => {
       const items = getAllRequest.result || [];
@@ -1027,17 +1036,28 @@ async function processOutboxSync() {
             if (item.type === 'TASK') {
               if (payload.attachments) {
                 for (let a of payload.attachments) {
-                  if (a.base64) {
-                    const url = await uploadBase64(a.base64, a.name, 'appointments');
+                  const source = a.base64 || a.data;
+                  if (source && source.startsWith('data:')) {
+                    const url = await uploadBase64(source, a.name, 'appointments');
                     if (url) { a.data = url; delete a.base64; }
                   }
                 }
               }
               if (payload.attachmentLinks) {
                 for (let l of payload.attachmentLinks) {
-                  if (l.base64) {
-                    const url = await uploadBase64(l.base64, l.name, 'appointments');
+                  const source = l.base64 || l.url;
+                  if (source && source.startsWith('data:')) {
+                    const url = await uploadBase64(source, l.name, 'appointments');
                     if (url) { l.url = url; delete l.base64; }
+                  }
+                }
+              }
+              if (payload.files) {
+                for (let f of payload.files) {
+                  const source = f.base64 || f.url || f.data;
+                  if (source && source.startsWith('data:')) {
+                    const url = await uploadBase64(source, f.name, 'appointments');
+                    if (url) { f.url = url; delete f.base64; }
                   }
                 }
               }
@@ -1052,6 +1072,7 @@ async function processOutboxSync() {
             const res = await fetch(endpoint, {
               method,
               headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
               body: JSON.stringify({ 
                 ...finalPayload, 
                 lat: item.lat, 
@@ -1091,6 +1112,7 @@ async function processOutboxSync() {
       console.error('[SW] Failed to read outbox for sync');
       reject(getAllRequest.error);
     };
+    }); // Close the then block for clients.matchAll
   });
 }
 

@@ -135,14 +135,24 @@ export default function ProjectExecutionClient({
       setIsOnline(online)
       setIsOfflineMode(!online)
     }
+    
+    const handleSyncSuccess = (e: any) => {
+      if (e.detail?.projectId === idFromUrl) {
+        console.log('[UI] Background sync success detected. Refreshing data...');
+        router.refresh()
+      }
+    }
+
     window.addEventListener('online', updateOnlineStatus)
     window.addEventListener('offline', updateOnlineStatus)
+    window.addEventListener('sync-success', handleSyncSuccess)
     updateOnlineStatus()
 
     return () => {
       window.removeEventListener('resize', checkSize)
       window.removeEventListener('online', updateOnlineStatus)
       window.removeEventListener('offline', updateOnlineStatus)
+      window.removeEventListener('sync-success', handleSyncSuccess)
     }
   }, [])
 
@@ -767,7 +777,8 @@ export default function ProjectExecutionClient({
           description, 
           date: new Date().toISOString(),
           isNote,
-          receiptPhoto: processedPhoto
+          receiptPhoto: processedPhoto,
+          phaseId: activePhase
         }
 
         if (!navigator.onLine) {
@@ -1233,17 +1244,21 @@ export default function ProjectExecutionClient({
   const combinedChat = [
     ...liveChat,
     ...pendingItems
-      .filter((item: any) => item.type === 'MESSAGE' || item.type === 'MEDIA_UPLOAD')
+      .filter((item: any) => item.type === 'MESSAGE' || item.type === 'EXPENSE' || item.type === 'GALLERY_UPLOAD')
       .map((item: any) => {
         // Build media array from either existing media or stored file preview
         let mediaArr: any[] = [];
         if (item.payload.media) {
-          mediaArr = [{ url: item.payload.media.url || item.payload.media.base64, filename: item.payload.media.filename, mimeType: item.payload.media.mimeType }];
+          mediaArr = [{ url: item.payload.media.url || item.payload.media.base64, filename: item.payload.media.filename || item.payload.media.name || 'archivo', mimeType: item.payload.media.mimeType || item.payload.media.type || 'image/jpeg' }];
+        } else if (item.payload.receiptPhoto) {
+          // Handle EXPENSE type photo
+          mediaArr = [{ url: item.payload.receiptPhoto, filename: 'recibo.jpg', mimeType: 'image/jpeg' }];
+        } else if (item.type === 'GALLERY_UPLOAD' && item.payload.url) {
+          // Handle GALLERY_UPLOAD type
+          mediaArr = [{ url: item.payload.url, filename: item.payload.filename || 'galeria.jpg', mimeType: item.payload.mimeType || 'image/jpeg' }];
         } else if (item.payload.previewBase64) {
-          // Use the base64 preview generated at save time
           mediaArr = [{ url: item.payload.previewBase64, filename: item.payload.fileData?.name || 'Archivo', mimeType: item.payload.fileData?.type || 'image/jpeg' }];
         } else if (item.payload.fileData) {
-          // Create a temporary blob URL from the stored ArrayBuffer
           try {
             const blob = new Blob([item.payload.fileData.buffer], { type: item.payload.fileData.type });
             const blobUrl = URL.createObjectURL(blob);
@@ -1253,12 +1268,20 @@ export default function ProjectExecutionClient({
           }
         }
 
+        // Determine content for special types
+        let displayContent = item.payload.content || '';
+        if (item.type === 'EXPENSE') {
+          displayContent = `💰 Gasto: $${item.payload.amount} - ${item.payload.description}`;
+        } else if (item.type === 'GALLERY_UPLOAD') {
+          displayContent = `📷 Galería: ${item.payload.filename || 'Archivo nuevo'}`;
+        }
+
         return {
           id: `pending-${item.id}`,
           projectId: item.projectId,
           userId: userId,
           userName: 'Yo (Pendiente)',
-          content: item.payload.content || (item.type === 'MEDIA_UPLOAD' ? '[Archivo pendiente]' : (item.payload.fileData ? `📎 ${item.payload.fileData.name}` : '')),
+          content: displayContent || (item.payload.fileData ? `📎 ${item.payload.fileData.name}` : ''),
           type: item.payload.type || item.type,
           createdAt: new Date(item.timestamp).toISOString(),
           isMe: true,

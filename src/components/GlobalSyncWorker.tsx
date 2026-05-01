@@ -211,6 +211,7 @@ export default function GlobalSyncWorker() {
         detail: { message: `Error en sincronización: ${err instanceof Error ? err.message : 'Desconocido'}` }
       }))
     } finally {
+      syncLock.current = false;
       setIsBulkSyncing(false)
     }
   }
@@ -470,7 +471,7 @@ export default function GlobalSyncWorker() {
     
     const handleManualSync = (e: any) => {
       console.log('[Sync] Manual sync triggered via event. Force:', e.detail?.force);
-      startBulkSync(e.detail?.force);
+      startBulkSync([], undefined, e.detail?.force || false);
     };
 
     window.addEventListener('online', handleStatusChange)

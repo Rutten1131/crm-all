@@ -168,38 +168,70 @@ export default function ProjectExecutionClient({
     }
   }
 
-  // Initial project recovery effect
+  // Initial project recovery effect — with polling for sync race conditions
   useEffect(() => {
-    async function initProject() {
-      if (hasRecoveredRef.current) return;
-      const needsCacheRecovery = (!project || Number(project?.id) !== idFromUrl) && idFromUrl > 0;
+    if (!mounted || !idFromUrl || idFromUrl <= 0) return;
+    if (hasRecoveredRef.current) return;
 
-      if (needsCacheRecovery) {
-        setIsSyncingOffline(true);
-        const timeoutId = setTimeout(() => {
+    const needsCacheRecovery = !project || Number(project?.id) !== idFromUrl;
+    if (!needsCacheRecovery) return;
+
+    setIsSyncingOffline(true);
+    let cancelled = false;
+    let retries = 0;
+    const MAX_RETRIES = 8; // ~8 seconds total
+
+    async function tryRecover(): Promise<boolean> {
+      try {
+        const cached = await db.projectsCache.get(idFromUrl);
+        if (cached && !cancelled) {
+          setLocalProject(cached);
+          const chat = await db.chatCache.get(idFromUrl);
+          setLocalChat(chat?.messages || []);
+          hasRecoveredRef.current = true;
+          setIsSyncingOffline(false);
+          setCacheNotFound(false);
+          return true;
+        }
+      } catch (err) {
+        console.warn('[ProjectClient] Dexie lookup error:', err);
+      }
+      return false;
+    }
+
+    // Polling: retry every second until data appears or we give up
+    const pollInterval = setInterval(async () => {
+      if (cancelled || hasRecoveredRef.current) {
+        clearInterval(pollInterval);
+        return;
+      }
+      retries++;
+      const found = await tryRecover();
+      if (found || retries >= MAX_RETRIES) {
+        clearInterval(pollInterval);
+        if (!found && !cancelled) {
           setIsSyncingOffline(false);
           setCacheNotFound(true);
-        }, 5000);
-
-        try {
-          const cached = await db.projectsCache.get(idFromUrl);
-          if (cached) {
-            setLocalProject(cached);
-            const chat = await db.chatCache.get(idFromUrl);
-            setLocalChat(chat?.messages || []);
-            hasRecoveredRef.current = true;
-          } else {
-            setCacheNotFound(true);
-          }
-        } catch (err) {
-          setCacheNotFound(true);
-        } finally {
-          clearTimeout(timeoutId);
-          setIsSyncingOffline(false);
         }
       }
-    }
-    if (mounted) initProject();
+    }, 1000);
+
+    // Immediate first try
+    tryRecover();
+
+    // Also listen for sync completion to retry immediately
+    const handleSyncDone = () => {
+      if (!hasRecoveredRef.current && !cancelled) {
+        tryRecover();
+      }
+    };
+    window.addEventListener('bulk-cache-sync-finished', handleSyncDone);
+
+    return () => {
+      cancelled = true;
+      clearInterval(pollInterval);
+      window.removeEventListener('bulk-cache-sync-finished', handleSyncDone);
+    };
   }, [mounted, idFromUrl]);
 
   const userRole = session?.user?.role

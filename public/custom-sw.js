@@ -508,8 +508,41 @@ async function findCachedPage(requestUrl, pathname, forceServe = false) {
     
   } else if (isOperatorProject) {
     console.log(`[SW ${VERSION}] Operator Project detail detected, looking for a valid shell...`);
-    const shellMatch = await caches.match('/admin/operador/proyecto/offline-shell', { ignoreVary: true, ignoreSearch: true });
-    if (isValidHTMLResponse(shellMatch)) return shellMatch;
+    
+    // v254: Aggressive shell search across ALL caches with multiple variants
+    const shellVariants = [
+      '/admin/operador/proyecto/offline-shell',
+      '/admin/operador/proyecto/offline-shell/',
+    ];
+    
+    // Search in PAGES_CACHE first
+    for (const variant of shellVariants) {
+      const shellMatch = await caches.match(variant, { ignoreVary: true, ignoreSearch: true });
+      if (isValidHTMLResponse(shellMatch)) {
+        console.log(`[SW] Operator shell found in cache: ${variant}`);
+        return shellMatch;
+      }
+    }
+    
+    // Search across ALL caches as fallback
+    const cacheNames = await caches.keys();
+    for (const cacheName of cacheNames) {
+      const c = await caches.open(cacheName);
+      for (const variant of shellVariants) {
+        const shellMatch = await c.match(variant, { ignoreVary: true, ignoreSearch: true });
+        if (isValidHTMLResponse(shellMatch)) {
+          console.log(`[SW] Operator shell found in cache '${cacheName}': ${variant}`);
+          return shellMatch;
+        }
+      }
+    }
+
+    // v254: As last resort, try the ADMIN project shell (same component structure)
+    const adminShell = await caches.match('/admin/proyectos/offline-shell', { ignoreVary: true, ignoreSearch: true });
+    if (isValidHTMLResponse(adminShell)) {
+      console.log(`[SW] Using Admin project shell as fallback for Operator`);
+      return adminShell;
+    }
 
     // Priority 2: The Operator Dashboard (better than offline.html)
     if (pathname.includes('/operador')) {

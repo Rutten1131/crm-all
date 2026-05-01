@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import InventarioClient from './InventarioClient'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'Inventario - Aquatech CRM',
   description: 'Gestión de materiales y suministros de Aquatech.',

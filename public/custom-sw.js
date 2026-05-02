@@ -29,7 +29,7 @@ const PRE_CACHE = [
   '/admin/operador/proyecto/offline-shell'
 ];
 
-const VERSION = 'v278';
+const VERSION = 'v282';
 
 // v242: Helper to bypass Chrome's "redirected response" security block
 function cleanResponse(response) {
@@ -402,9 +402,37 @@ async function navigationHandler(request) {
 
     // v269: Added /admin/calendario to the "force shell" list for faster mobile entry.
     const isProject = url.pathname.includes('/proyecto/') || url.pathname.includes('/proyectos/');
+    const isOperatorProject = url.pathname.match(/\/admin\/operador\/proyecto\/\d+/);
     const isOperatorDashboard = url.pathname === '/admin/operador' || url.pathname === '/admin/operador/';
     const isCalendar = url.pathname === '/admin/calendario' || url.pathname === '/admin/calendario/';
     let cached = null;
+    
+    // v282: CRITICAL FIX — When OFFLINE, serve the operator project shell IMMEDIATELY
+    // for any /admin/operador/proyecto/[id] URL that is not individually cached.
+    // This is what prevents the "click does nothing" bug.
+    if (isOperatorProject && !navigator.onLine) {
+      const shellVariants = [
+        '/admin/operador/proyecto/offline-shell',
+        '/admin/operador/proyecto/offline-shell/'
+      ];
+      for (const variant of shellVariants) {
+        const shellMatch = await caches.match(variant, { ignoreVary: true, ignoreSearch: true });
+        if (isValidHTMLResponse(shellMatch)) {
+          console.log(`[SW ${VERSION}] OFFLINE: Serving operator shell immediately for: ${url.pathname}`);
+          return cleanResponse(shellMatch);
+        }
+      }
+      // Search all caches
+      const allCacheNames = await caches.keys();
+      for (const cn of allCacheNames) {
+        const c = await caches.open(cn);
+        const m = await c.match('/admin/operador/proyecto/offline-shell', { ignoreVary: true });
+        if (isValidHTMLResponse(m)) {
+          console.log(`[SW ${VERSION}] OFFLINE: Shell found in ${cn}, serving for: ${url.pathname}`);
+          return cleanResponse(m);
+        }
+      }
+    }
     
     if (isProject || isOperatorDashboard || isCalendar) {
       console.log(`[SW ${VERSION}] Fast-track route detected, forcing shell/cache for instant load...`);
@@ -654,9 +682,23 @@ async function findCachedPage(requestUrl, pathname, forceServe = false) {
     }
   }
 
-  // v233: ABSOLUTE FALLBACK (Memory-resident HTML)
-  // This prevents the "removeChild of null" and Next.js infinite loop errors
-  // by providing a valid, minimal HTML structure that doesn't trigger a router retry.
+  // v282: CRITICAL FIX — Instead of dead-end "Sin Conexión" page, auto-redirect
+  // to the offline-shell which contains the real app UI with Dexie data.
+  // The old fallback caused the "click does nothing" because the browser received
+  // a non-interactive HTML page with no Next.js router.
+  const isOpProject = pathname.match(/\/admin\/operador\/proyecto\//);
+  const isAdmProject = pathname.match(/\/admin\/proyectos\//);
+  const shellRedirect = isOpProject 
+    ? '/admin/operador/proyecto/offline-shell'
+    : isAdmProject 
+      ? '/admin/proyectos/offline-shell'
+      : null;
+      
+  if (shellRedirect) {
+    console.warn(`[SW ${VERSION}] No shell found in cache — redirecting to shell: ${shellRedirect}`);
+    return Response.redirect(shellRedirect, 302);
+  }
+  
   console.warn(`[SW ${VERSION}] No shell found in cache, serving absolute memory-fallback for: ${pathname}`);
   return new Response(`
     <!DOCTYPE html>
@@ -664,7 +706,7 @@ async function findCachedPage(requestUrl, pathname, forceServe = false) {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Offline | Aquatech</title>
+      <title>Sin conexión | Aquatech</title>
       <style>
         body { font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: white; text-align: center; }
         .card { background: #1e293b; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); max-width: 400px; }
@@ -675,13 +717,9 @@ async function findCachedPage(requestUrl, pathname, forceServe = false) {
     <body>
       <div class="card">
         <h1>Sin Conexión</h1>
-        <p>Esta sección no está disponible offline todavía. Por favor, regresa cuando tengas internet.</p>
+        <p>Conecta a internet para ver esta sección.</p>
         <button onclick="window.history.back()">Regresar</button>
       </div>
-      <script>
-        window.__NEXT_DATA__ = { props: { pageProps: {} }, page: "${pathname}", query: {}, buildId: "offline", isFallback: false, gip: true };
-        console.log("SW: Absolute fallback active.");
-      </script>
     </body>
     </html>
   `, {

@@ -47,12 +47,15 @@ export default function OperatorDashboardClient({
   const searchParams = useSearchParams()
   const tabParam = searchParams?.get('tab')
 
-  const [activeTab, setActiveTab] = useState<'PROYECTOS' | 'TAREAS' | 'CALENDARIO'>(() => {
+  const [activeTab, setActiveTab] = useState<null | 'PROYECTOS' | 'TAREAS' | 'CALENDARIO'>(() => {
     if (tabParam === 'calendario') return 'CALENDARIO'
     if (typeof window !== 'undefined') {
-      return (sessionStorage.getItem('operator_active_tab') as any) || 'PROYECTOS'
+      const saved = sessionStorage.getItem('operator_active_tab')
+      // v282: Si no hay nada guardado, no seleccionar ninguna pestaña (carga rápida)
+      if (saved && saved !== 'null' && saved !== 'INICIO') return saved as any
+      return null
     }
-    return 'PROYECTOS'
+    return null
   })
 
   useEffect(() => {
@@ -62,10 +65,45 @@ export default function OperatorDashboardClient({
   }, [tabParam])
 
   useEffect(() => {
-    sessionStorage.setItem('operator_active_tab', activeTab)
+    sessionStorage.setItem('operator_active_tab', activeTab ?? 'null')
   }, [activeTab])
 
   const [appointments, setAppointments] = useState(initialAppointments)
+  const [isLoadingData, setIsLoadingData] = useState(true)
+
+  // v282: CARGA DEL LADO DEL CLIENTE — El servidor solo autentica,
+  // los datos se piden después de que la página ya es visible.
+  useEffect(() => {
+    const loadData = async () => {
+      // 1. Intentar primero desde Dexie (datos offline)
+      // La lista de proyectos de la caché local ya se mostrará via useLiveQuery.
+      // Solo necesitamos cargar los appointments desde la API.
+      const cachedAppts = localStorage.getItem('operator_appointments_cache')
+      if (cachedAppts) {
+        try { setAppointments(JSON.parse(cachedAppts)) } catch (e) {}
+      }
+
+      if (!navigator.onLine) {
+        setIsLoadingData(false)
+        return
+      }
+
+      try {
+        const res = await fetch(`/api/appointments?userId=${user.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          setAppointments(data)
+          localStorage.setItem('operator_appointments_cache', JSON.stringify(data))
+        }
+      } catch (e) {
+        console.warn('[Operator] Failed to load appointments from API, using cache')
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+    loadData()
+  }, [user.id])
+
   // Use Dexie as live source for projects to support offline correctly
   const projectsFromCache = useLiveQuery(
     async () => {
@@ -95,11 +133,11 @@ export default function OperatorDashboardClient({
     // v274: Highly optimized unread counts (staggered & idle-aware)
     const timer = setTimeout(async () => {
       const userId = Number(user?.id);
-      if (!userId || !initialProjects.length) return;
-
-      const projectsToProcess = [...initialProjects]
+      const projectsToProcess = [...(projectsFromCache || [])]
         .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
-        .slice(0, 30); // v274: Reduced from 50 to 30 for faster initial mount
+        .slice(0, 30);
+
+      if (!userId || !projectsToProcess.length) return;
 
       const counts: Record<number, number> = {};
       
@@ -113,15 +151,12 @@ export default function OperatorDashboardClient({
           
           batch.forEach((p, index) => {
             const chat = chats[index];
-            const view = userViews.find(v => v.projectId === p.id);
-            const lastSeen = view?.lastSeen ? new Date(view.lastSeen) : new Date(0);
-
+            counts[p.id] = p.unreadCount || 0;
             if (chat && chat.messages) {
+              const lastSeen = new Date(0);
               counts[p.id] = chat.messages.filter((m: any) => 
                 new Date(m.createdAt) > lastSeen && m.userId !== userId
               ).length;
-            } else {
-              counts[p.id] = p.unreadCount || 0;
             }
           });
         });
@@ -137,7 +172,8 @@ export default function OperatorDashboardClient({
       }
     }, 8000); // 8s delay to completely clear the LCP path
     return () => clearTimeout(timer);
-  }, [initialProjects, userViews, user?.id]);
+  }, [projectsFromCache, user?.id]);
+
 
   // Merge server projects with cache projects (Smart Merge v224)
   const projects = useMemo(() => {
@@ -190,16 +226,6 @@ export default function OperatorDashboardClient({
     };
   }, []);
 
-  useEffect(() => {
-    if (initialAppointments.length > 0) {
-      localStorage.setItem('operator_appointments_cache', JSON.stringify(initialAppointments))
-    } else {
-      const cached = localStorage.getItem('operator_appointments_cache')
-      if (cached) {
-        try { setAppointments(JSON.parse(cached)) } catch (e) {}
-      }
-    }
-  }, [initialAppointments])
 
   // 2. Local outbox tasks (created offline)
   const pendingTasksRaw = useLiveQuery(
@@ -646,7 +672,13 @@ export default function OperatorDashboardClient({
               const progress = totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0
               
               return (
-                <Link href={`/admin/operador/proyecto/${project.id}`} key={project.id} className="card interactive" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column' }}>
+                <Link 
+                  href={`/admin/operador/proyecto/${project.id}`} 
+                  key={project.id} 
+                  prefetch={false}
+                  className="card interactive" 
+                  style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column' }}
+                >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
                     <span className={`status-badge status-${project.status.toLowerCase()}`}>
                       {project.status}

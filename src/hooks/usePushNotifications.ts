@@ -5,7 +5,8 @@ import { useState, useEffect, useCallback } from 'react'
 type PushStatus = 'loading' | 'unsupported' | 'denied' | 'prompt' | 'subscribed' | 'unsubscribed'
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const base64Clean = base64String.replace(/[\t\n\f\r ]+/g, '');
+  // Strip literally everything that is not a valid base64url character
+  const base64Clean = base64String.replace(/[^A-Za-z0-9\-_]/g, '');
   const padding = '='.repeat((4 - (base64Clean.length % 4)) % 4)
   const base64 = (base64Clean + padding).replace(/-/g, '+').replace(/_/g, '/')
   const rawData = window.atob(base64)

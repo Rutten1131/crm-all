@@ -9,27 +9,12 @@ import { db } from '@/lib/db'
  * Upgraded: Now also fetches JSON data for projects and chats to populate Dexie.
  */
 export default function OfflinePrefetcher({ urls }: { urls: string[] }) {
-  const router = useRouter()
-
   useEffect(() => {
     if (!urls || urls.length === 0) return
 
-    // 1. Standard Next.js Prefetch (v273: Increased delay and staggered to avoid congestion)
-    const timer = setTimeout(() => {
-      const staggerPrefetch = async () => {
-        for (const url of urls) {
-          if ('requestIdleCallback' in window) {
-            await new Promise(resolve => (window as any).requestIdleCallback(resolve, { timeout: 2000 }));
-          } else {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-          try { router.prefetch(url) } catch (e) {}
-        }
-      }
-      staggerPrefetch();
-    }, 6000)
-
-    // 2. SW and Data Prefetch (v273: Wait 12s to ensure navigation is fully finished)
+    // SW Data Prefetch (v279: Wait 12s to ensure navigation is fully finished)
+    // We only ask the SW to cache the URLs (Offline Shells) using its throttled logic.
+    // We explicitly AVOID router.prefetch here because calling it 30 times exhausts the Prisma DB Pool!
     const dataTimer = setTimeout(() => {
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({
@@ -40,10 +25,9 @@ export default function OfflinePrefetcher({ urls }: { urls: string[] }) {
     }, 12000)
 
     return () => {
-      clearTimeout(timer)
       clearTimeout(dataTimer)
     }
-  }, [urls, router])
+  }, [urls])
 
   return null
 }

@@ -396,14 +396,14 @@ export default function GlobalSyncWorker() {
 
     // Cross-tab and remount lock
     const now = Date.now()
-    if (now - lastSyncExecution < 5000) {
-      // v272: Reduced throttle from 10s to 5s for faster retry
+    if (now - lastSyncExecution < 3000) {
+      // v282: Reduced throttle to 3s for faster processing
       return
     }
 
     const lastSyncStart = localStorage.getItem('global_sync_lock')
-    if (lastSyncStart && (now - Number(lastSyncStart)) < 30000) {
-      // v272: Reduced cross-tab lock from 60s to 30s
+    if (lastSyncStart && (now - Number(lastSyncStart)) < 8000) {
+      // v282: Reduced cross-tab lock from 30s to 8s so items flow continuously
       return
     }
     localStorage.setItem('global_sync_lock', String(now))
@@ -682,6 +682,19 @@ export default function GlobalSyncWorker() {
     if (hasSyncedAnything) {
       router.refresh()
     }
+
+    // v282: After processing, check if there are STILL pending items.
+    // If so, schedule an immediate re-run so the queue drains continuously.
+    try {
+      const remaining = await db.outbox.where('status').anyOf(['pending', 'failed']).count();
+      if (remaining > 0) {
+        console.log(`[Sync] ${remaining} items still pending — scheduling retry in 3s`);
+        setTimeout(() => syncOutbox(), 3000);
+      } else {
+        console.log('[Sync] Outbox fully drained ✓');
+      }
+    } catch (e) { /* ignore */ }
+
     } finally {
       outboxLock.current = false
       localStorage.removeItem('global_sync_lock')
@@ -819,11 +832,16 @@ export default function GlobalSyncWorker() {
     
     // Initial sync and cache refresh
     if (navigator.onLine) {
-      // Fire immediately so pending items upload as soon as the app opens
+      // Fire outbox sync after hydration finishes to ensure fast UI paint
       setTimeout(() => {
         syncOutbox()
+      }, 2000); 
+
+      // v281: Delay heavy global caches (materials, clients) by 20 SECONDS. 
+      // Downloading and parsing megabytes of JSON freezes mobile devices and blocks the main thread.
+      setTimeout(() => {
         refreshCaches()
-      }, 500); // 500ms delay to avoid exact collision with hydration
+      }, 20000);
 
       // v274: Delayed start for bulk sync to avoid LCP/Hydration contention
       setTimeout(() => {

@@ -86,22 +86,26 @@ export default function AdminCalendarClient({
       
       if (res.ok) {
         const data = await res.json()
-        setAppointments(data)
         
-        // Always cache to IndexedDB for offline persistence
-        // If it's "all", we replace the whole cache
-        if (selectedOperatorId === 'all') {
-          await db.appointmentsCache.clear()
-          await db.appointmentsCache.bulkPut(data)
-        } else {
-          // If it's a specific operator, we merge/update
-          await db.appointmentsCache.bulkPut(data)
+        // v274: Defensive check — ensure data is an array before setting state or caching
+        if (Array.isArray(data)) {
+          setAppointments(data)
+          
+          // Always cache to IndexedDB for offline persistence
+          if (selectedOperatorId === 'all') {
+            await db.appointmentsCache.clear()
+            await db.appointmentsCache.bulkPut(data)
+          } else {
+            // Specific operator: update/merge (we don't clear so we don't lose other operators' data offline)
+            await db.appointmentsCache.bulkPut(data)
+          }
         }
         setLoading(false)
       } else {
-        // Si la base de datos cortó la conexión (error 500), reintentamos silenciosamente una vez
-        if (retryCount < 1) {
-          console.warn(`Fetch fallido (Status: ${res.status}). Reintentando conexión a DB en 500ms...`)
+        // v274: Improved error handling for 504 (timeout) and 500
+        const isTimeout = res.status === 504;
+        if (retryCount < 1 && !isTimeout) {
+          console.warn(`Fetch fallido (Status: ${res.status}). Reintentando...`)
           setTimeout(() => fetchAppointments(silent, retryCount + 1), 500)
           return
         }
@@ -140,6 +144,33 @@ export default function AdminCalendarClient({
     const handleRefresh = () => fetchAppointments(true)
     window.addEventListener('calendar-refresh', handleRefresh)
     return () => window.removeEventListener('calendar-refresh', handleRefresh)
+  }, [selectedOperatorId])
+
+  // v274: Listen for sync events to refresh data automatically
+  useEffect(() => {
+    const handleSyncFinished = (event: any) => {
+      if (event.data?.type === 'OUTBOX_SYNC_FINISHED') {
+        console.log('[Calendar] Background sync finished, refreshing...')
+        fetchAppointments(true)
+      }
+    }
+
+    const handleSyncSuccess = (event: any) => {
+      if (event.detail?.type === 'TASK') {
+        console.log('[Calendar] Task sync success, refreshing...')
+        fetchAppointments(true)
+      }
+    }
+
+    const syncChannel = new BroadcastChannel('aquatech-sync')
+    syncChannel.addEventListener('message', handleSyncFinished)
+    window.addEventListener('sync-success' as any, handleSyncSuccess)
+
+    return () => {
+      syncChannel.removeEventListener('message', handleSyncFinished)
+      syncChannel.close()
+      window.removeEventListener('sync-success' as any, handleSyncSuccess)
+    }
   }, [selectedOperatorId])
 
   const handleSaveAppointment = async (data: any) => {

@@ -124,7 +124,7 @@ export default function OperatorDashboardClient({
         });
       });
       setUnreadCounts(counts);
-    }, 2000); // 2s delay to ensure navigation is finished
+    }, 4000); // 4s delay to ensure navigation and layout are completely finished
     return () => clearTimeout(timer);
   }, [initialProjects, userViews, user?.id]);
 
@@ -361,18 +361,12 @@ export default function OperatorDashboardClient({
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
              <ManualSyncButton />
-             <button 
-               onClick={() => {
-                 if (typeof navigator !== 'undefined' && !navigator.onLine) {
-                   alert('La creación de proyectos no está disponible en modo offline. Por favor, recupera la conexión para crear uno nuevo.');
-                 } else {
-                   window.location.href = '/admin/operador/nuevo';
-                 }
-               }} 
-               className="btn btn-secondary"
-             >
-               Crear Proyecto
-             </button>
+              <Link 
+                href="/admin/operador/nuevo"
+                className="btn btn-secondary"
+              >
+                Crear Proyecto
+              </Link>
           </div>
         </div>
         {/* activeDayRecord && (

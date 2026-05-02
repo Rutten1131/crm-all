@@ -142,7 +142,19 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirst(request, 'aquatech-apis-v1', 15000));
+    // v274: EXCLUDE critical data APIs from SW cache to let Dexie handle it exclusively.
+    // This prevents stale/partial SW cache from overwriting reliable Dexie data.
+    const isCriticalApi = 
+      url.pathname.includes('/api/appointments') || 
+      url.pathname.includes('/api/projects') || 
+      url.pathname.includes('/api/users');
+
+    if (isCriticalApi) {
+      return; // Fall through to browser fetch (components handle offline via Dexie)
+    }
+    
+    // v274: Reduced API timeout to 5s for faster offline fallback
+    event.respondWith(networkFirst(request, 'aquatech-apis-v1', 5000));
     return;
   }
 
@@ -686,8 +698,9 @@ async function networkFirst(request, cacheName, timeout = 10000) {
     }
 
     if (request.headers.get('Accept')?.includes('application/json') || request.url.includes('/api/')) {
-       return new Response(JSON.stringify([]), {
-         status: 200, 
+       // v274: DON'T return empty array if we have no cache. Return 504 so the UI knows it's a network failure.
+       return new Response(JSON.stringify({ error: 'Network failure', isOffline: true }), {
+         status: 504, 
          headers: { 'Content-Type': 'application/json' }
        });
     }
@@ -816,22 +829,32 @@ self.addEventListener('message', (event) => {
   // v267: Supports replyPort (MessageChannel) so the client can await completion per-URL.
   if (event.data && event.data.type === 'PRECACHE_URLS') {
     const urls = event.data.urls || [];
-    const replyPort = event.data.replyPort || null; // v267: MessageChannel port for client await
+    const replyPort = event.data.replyPort || null;
+    const syncChannel = new BroadcastChannel('aquatech-sync');
     console.log('[SW] Warm-up pre-caching request for', urls.length, 'URLs');
     
     event.waitUntil(
       caches.open(PAGES_CACHE).then(async (cache) => {
+        let current = 0;
+        const total = urls.length;
+
         for (const url of urls) {
+          current++;
           try {
-            // v233: Strict skip if already in cache and response is valid
+            // Report progress to the UI
+            syncChannel.postMessage({ 
+              type: 'ASSET_PRECACHE_PROGRESS', 
+              current, 
+              total, 
+              url 
+            });
+
             const existing = await cache.match(url);
             if (existing && existing.ok && !existing.redirected) {
-               // v267: Still reply so the client doesn't wait the full timeout
                if (replyPort) replyPort.postMessage({ done: true, url, cached: true });
                continue;
             }
 
-            // v253: Skip data URIs to avoid console errors
             if (url.startsWith('data:')) {
               if (replyPort) replyPort.postMessage({ done: true, url, skipped: true });
               continue;
@@ -853,17 +876,25 @@ self.addEventListener('message', (event) => {
                 const alt = url.endsWith('/') ? url.slice(0, -1) : url + '/';
                 await cache.put(alt, response.clone());
                 
-                // v227: Extract and pre-cache JS chunks found in the HTML
                 try {
                   const htmlText = await response.clone().text();
                   const chunkMatches = Array.from(htmlText.matchAll(/\/(_next\/static\/[^"'\s>]+)/g));
                   const assetsCache = await caches.open(ASSETS_CACHE);
                   
-                  // v273: Sequential chunk pre-caching to avoid 502/concurrency issues
+                  let chunkCount = 0;
                   for (const match of chunkMatches) {
+                    chunkCount++;
                     const chunkPath = match[1];
                     const fullChunkUrl = new URL('/' + chunkPath, self.location.origin).href;
                     
+                    // Small sub-progress for chunks if needed
+                    syncChannel.postMessage({ 
+                      type: 'ASSET_CHUNK_PROGRESS', 
+                      current: chunkCount, 
+                      total: chunkMatches.length,
+                      parentUrl: url
+                    });
+
                     const hasChunk = await assetsCache.match(fullChunkUrl);
                     if (!hasChunk) {
                       try {
@@ -878,21 +909,20 @@ self.addEventListener('message', (event) => {
 
                 console.log(`[SW ${VERSION}] Warm-cached success (+chunks):`, url);
               } else if (!isLoginRedirect) {
-                // v263: Also cache non-HTML (like RSC shells) if they are requested via pre-cache
                 await cache.put(url, response.clone());
               }
             }
             
-            // v267: Reply to client AFTER processing this URL so precacheAndWait() resolves
             if (replyPort) replyPort.postMessage({ done: true, url });
-
-            await new Promise(r => setTimeout(r, 800)); // v273: Increased to 800ms to give network air
+            await new Promise(r => setTimeout(r, 800)); 
           } catch (e) {
             console.warn(`[SW ${VERSION}] Warm-cache failed for:`, url);
-            // v267: Reply even on failure so the client doesn't hang
             if (replyPort) replyPort.postMessage({ done: true, url, error: true });
           }
         }
+        
+        syncChannel.postMessage({ type: 'ASSET_PRECACHE_FINISHED' });
+        syncChannel.close();
         console.log(`[SW ${VERSION}] Pre-caching sequence finished`);
         trimCache(PAGES_CACHE, 400); 
       })
@@ -1297,6 +1327,12 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
         // v261: Pacing delay between items to prevent server saturation
         await new Promise(r => setTimeout(r, 500));
       }
+
+      // v274: Notify UI that sync cycle finished
+      const syncChannel = new BroadcastChannel('aquatech-sync');
+      syncChannel.postMessage({ type: 'OUTBOX_SYNC_FINISHED' });
+      syncChannel.close();
+
       resolve();
     };
 

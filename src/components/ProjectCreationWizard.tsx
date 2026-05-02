@@ -181,7 +181,7 @@ export default function ProjectCreationWizard({ panelBase = '/admin/proyectos' }
     // v264: Robust user fetching with offline fallback
     try {
       if (navigator.onLine) {
-        const r = await fetch('/api/users?roles=OPERATOR,SUBCONTRATISTA,ADMINISTRADORA,ADMIN')
+        const r = await fetch('/api/users')
         if (r.ok) {
           const data = await r.json()
           if (Array.isArray(data)) {
@@ -676,9 +676,64 @@ export default function ProjectCreationWizard({ panelBase = '/admin/proyectos' }
                         </button>
                      </div>
 
-                     {/* Client search removed per user request */}
+                      <div style={{ position: 'relative', marginBottom: '15px' }} ref={clientDropdownRef}>
+                        <label className="form-label">Buscar Cliente Existente</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                           <input 
+                             type="text" 
+                             className="form-input" 
+                             placeholder="Escribe nombre de cliente..." 
+                             value={clientSearchText} 
+                             onChange={e => {
+                               setClientSearchText(e.target.value);
+                               setShowClientDropdown(true);
+                             }}
+                             onFocus={() => setShowClientDropdown(true)}
+                           />
+                           {clientSearchText && (
+                             <button 
+                               type="button" 
+                               className="btn btn-ghost btn-xs"
+                               onClick={() => {
+                                 setClientSearchText('');
+                                 setIsNewClient(true);
+                                 setClientData({ id: null, name: '', ruc: '', phone: '', email: '', city: '', address: '', notes: '' });
+                               }}
+                             >
+                               ✕
+                             </button>
+                           )}
+                        </div>
+                        
+                        {showClientDropdown && filteredClients.length > 0 && (
+                          <div style={{ 
+                            position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                            backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px',
+                            marginTop: '5px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', overflow: 'hidden'
+                          }}>
+                             {filteredClients.map(c => (
+                               <div 
+                                 key={c.id} 
+                                 onClick={() => selectExistingClient(c.id)}
+                                 style={{ padding: '12px 15px', cursor: 'pointer', borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }}
+                                 onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                                 onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                               >
+                                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{c.name}</div>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{c.ruc || 'Sin RUC'} · {c.phone || 'Sin Tel.'}</div>
+                                </div>
+                             ))}
+                             <div 
+                               onClick={() => selectExistingClient('NEW')}
+                               style={{ padding: '12px 15px', cursor: 'pointer', color: 'var(--primary)', fontWeight: 'bold', fontSize: '0.85rem', textAlign: 'center', backgroundColor: 'rgba(56, 189, 248, 0.05)' }}
+                             >
+                               + Añadir Nuevo Cliente
+                             </div>
+                          </div>
+                        )}
+                      </div>
 
-                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }} className="responsive-2col">
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }} className="responsive-2col">
                         <input type="text" className="form-input" placeholder="Nombre completo *" value={clientData.name} onChange={e => setClientData({...clientData, name: e.target.value})} disabled={!isNewClient} />
                         <input type="text" className="form-input" placeholder="RUC / Cédula" value={clientData.ruc} onChange={e => setClientData({...clientData, ruc: e.target.value})} disabled={!isNewClient} />
                         <input type="tel" className="form-input" placeholder="Teléfono *" value={clientData.phone} onChange={e => setClientData({...clientData, phone: e.target.value})} disabled={!isNewClient} />

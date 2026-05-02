@@ -109,6 +109,13 @@ export default function GlobalSyncWorker() {
         const fetchedProjects = await res.json()
         projectsToProcess = fetchedProjects;
         const totalToSync = projectsToProcess.length
+        const syncChannel = new BroadcastChannel('aquatech-sync');
+        
+        syncChannel.postMessage({ 
+          type: 'DATA_SYNC_START', 
+          total: totalToSync 
+        });
+
         setBulkProgress({ current: 0, total: totalToSync })
         
         for (let i = 0; i < projectsToProcess.length; i++) {
@@ -140,6 +147,16 @@ export default function GlobalSyncWorker() {
           }
           
           setBulkProgress(prev => ({ ...prev, current: i + 1 }));
+          
+          const syncChannel = new BroadcastChannel('aquatech-sync');
+          syncChannel.postMessage({ 
+            type: 'DATA_SYNC_PROGRESS', 
+            current: i + 1, 
+            total: totalToSync,
+            projectName: p.title || p.id
+          });
+          syncChannel.close();
+
           window.dispatchEvent(new CustomEvent('bulk-cache-sync-progress', { 
             detail: { current: i + 1, total: totalToSync } 
           }));
@@ -268,7 +285,8 @@ export default function GlobalSyncWorker() {
         detail: { message: `Sincronizando equipo de trabajo...` }
       }))
       // v264: Fetch all relevant roles for offline selection
-      const userRes = await fetch('/api/users?roles=OPERATOR,SUBCONTRATISTA,ADMINISTRADORA,ADMIN', { priority: 'low' })
+      // v274: Fetch ALL users (no role filter) so they are all available offline for assignments
+      const userRes = await fetch('/api/users', { priority: 'low' })
       if (userRes.ok) {
         const users = await userRes.json()
         if (Array.isArray(users)) {
@@ -304,6 +322,10 @@ export default function GlobalSyncWorker() {
         status: 'idle'
       })
       
+      const syncChannelFinal = new BroadcastChannel('aquatech-sync');
+      syncChannelFinal.postMessage({ type: 'DATA_SYNC_FINISHED', count: finalCount });
+      syncChannelFinal.close();
+
       window.dispatchEvent(new CustomEvent('bulk-cache-sync-finished', { 
         detail: { count: finalCount } 
       }))

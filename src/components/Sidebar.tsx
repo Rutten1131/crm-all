@@ -163,9 +163,38 @@ export default function Sidebar() {
   const [offlineUser, setOfflineUser] = useState<any>(null)
   const [notifications, setNotifications] = useState<any>({ totalUnread: 0, byProject: {} })
 
-  // v273: Sync Status Monitoring
+  // v273: Enhanced Unified Sync Monitoring
   const syncMeta = useLiveQuery(() => db.cacheMetadata.get('projects_bulk'))
   const pendingOutboxCount = useLiveQuery(() => db.outbox.count()) || 0
+  
+  const [dataSync, setDataSync] = useState<{ current: number, total: number, active: boolean, label?: string }>({ 
+    current: 0, total: 0, active: false 
+  })
+  const [assetSync, setAssetSync] = useState<{ current: number, total: number, active: boolean, label?: string }>({ 
+    current: 0, total: 0, active: false 
+  })
+
+  useEffect(() => {
+    const channel = new BroadcastChannel('aquatech-sync');
+    channel.onmessage = (event) => {
+      const { type, current, total, projectName, url } = event.data;
+      
+      if (type === 'DATA_SYNC_START') {
+        setDataSync({ current: 0, total, active: true, label: 'Iniciando datos...' });
+      } else if (type === 'DATA_SYNC_PROGRESS') {
+        setDataSync({ current, total, active: true, label: projectName || 'Procesando...' });
+      } else if (type === 'DATA_SYNC_FINISHED') {
+        setDataSync(prev => ({ ...prev, active: false }));
+      } else if (type === 'ASSET_PRECACHE_PROGRESS') {
+        setAssetSync({ current, total, active: true, label: 'Sincronizando archivos...' });
+      } else if (type === 'ASSET_PRECACHE_FINISHED') {
+        setAssetSync(prev => ({ ...prev, active: false }));
+      }
+    };
+    return () => channel.close();
+  }, []);
+
+  const isActuallySyncing = pendingOutboxCount > 0 || dataSync.active || assetSync.active;
 
   // Hooks para datos de sesión y permisos (Siempre al principio)
   const effectiveRole = useMemo(() => String(session?.user?.role || offlineUser?.role || 'OPERATOR').toUpperCase(), [session, offlineUser])
@@ -335,6 +364,8 @@ export default function Sidebar() {
     let isMounted = true;
     const fetchNotifications = async () => {
       if (document.visibilityState !== 'visible' || (typeof navigator !== 'undefined' && !navigator.onLine)) return
+      // v273: Small delay for the very first fetch to avoid congestion
+      await new Promise(r => setTimeout(r, 3000));
       try {
         const resp = await fetch('/api/notifications/summary')
         if (resp.ok && isMounted) {
@@ -385,32 +416,6 @@ export default function Sidebar() {
       console.warn('Offline logout fallback', e)
     }
     window.location.href = '/admin/login'
-  }
-
-  // Early Return (Después de todos los Hooks)
-  if (status === 'loading' && !offlineUser) {
-    return (
-      <>
-        <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
-          <div className="sidebar-brand">
-            <img src="/logo.jpg" alt="Aquatech" className="sidebar-brand-logo" />
-            <div className="sidebar-brand-text">A<span>Q</span>UATECH</div>
-          </div>
-          <div style={{ padding: '20px', color: 'var(--text-muted)', fontSize: '0.8rem', flex: 1 }}>Cargando...</div>
-          <div className="sidebar-footer">
-            <div className="sidebar-user" onClick={handleLogout} style={{ justifyContent: 'center' }}>
-               <span style={{ color: 'var(--danger)', fontSize: '0.85rem', fontWeight: 'bold' }}>Salir (Modo Seguro)</span>
-            </div>
-          </div>
-        </aside>
-        <nav className="mobile-nav">
-          <button className="mobile-nav-item" onClick={handleLogout} style={{ background: 'none', border: 'none', width: '100%' }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-            Salir (Modo Seguro)
-          </button>
-        </nav>
-      </>
-    )
   }
 
   const isActive = (href: string) => {
@@ -515,30 +520,77 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        {/* v273: Global Sync Status */}
+        {/* v273: Unified Sync Status Indicator */}
         <div style={{ 
           padding: '12px 20px', 
           borderTop: '1px solid rgba(255,255,255,0.05)',
-          fontSize: '0.75rem',
-          color: 'var(--text-muted)'
+          fontSize: '0.7rem',
+          color: 'var(--text-muted)',
+          backgroundColor: isActuallySyncing ? 'rgba(56, 189, 248, 0.03)' : 'transparent',
+          transition: 'all 0.3s ease'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <div style={{ 
               width: '8px', 
               height: '8px', 
               borderRadius: '50%', 
-              backgroundColor: pendingOutboxCount > 0 ? '#fbbf24' : '#10b981',
-              boxShadow: pendingOutboxCount > 0 ? '0 0 8px #fbbf24' : '0 0 8px #10b981'
+              backgroundColor: isActuallySyncing ? '#38bdf8' : '#10b981',
+              boxShadow: isActuallySyncing ? '0 0 10px #38bdf8' : '0 0 10px #10b981',
+              animation: isActuallySyncing ? 'pulse 2s infinite' : 'none'
             }} />
-            <span style={{ fontWeight: 600, color: 'var(--text)' }}>
-              {pendingOutboxCount > 0 ? `Sincronizando (${pendingOutboxCount} pendientes)` : 'Sistema Sincronizado'}
+            <span style={{ fontWeight: 600, color: isActuallySyncing ? 'var(--text)' : 'var(--text-muted)' }}>
+              {isActuallySyncing ? 'Sincronizando...' : 'Sistema Listo (Offline)'}
             </span>
           </div>
-          {syncMeta?.lastSync && (
-            <div style={{ opacity: 0.7 }}>
-              Última actualización: {formatToEcuador(syncMeta.lastSync, { hour: '2-digit', minute: '2-digit' })}
-            </div>
-          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {pendingOutboxCount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
+                <span>Subiendo cambios:</span>
+                <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{pendingOutboxCount}</span>
+              </div>
+            )}
+            
+            {dataSync.active && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
+                  <span style={{ fontSize: '0.65rem' }}>Datos: {dataSync.label}</span>
+                  <span>{dataSync.current}/{dataSync.total}</span>
+                </div>
+                <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '10px', overflow: 'hidden' }}>
+                  <div style={{ 
+                    width: `${(dataSync.current / dataSync.total) * 100}%`, 
+                    height: '100%', 
+                    background: '#38bdf8',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+              </div>
+            )}
+
+            {assetSync.active && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '2px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
+                  <span style={{ fontSize: '0.65rem' }}>Archivos de Sistema</span>
+                  <span>{assetSync.current}/{assetSync.total}</span>
+                </div>
+                <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '10px', overflow: 'hidden' }}>
+                  <div style={{ 
+                    width: `${(assetSync.current / assetSync.total) * 100}%`, 
+                    height: '100%', 
+                    background: '#10b981',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+              </div>
+            )}
+            
+            {!isActuallySyncing && syncMeta?.lastSync && (
+              <div style={{ opacity: 0.5, fontSize: '0.6rem', marginTop: '2px' }}>
+                Última sincronización: {formatToEcuador(syncMeta.lastSync, { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="sidebar-footer">

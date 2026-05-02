@@ -46,6 +46,14 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
 
   const pagesToPrefetch = getPagesToPrefetch()
 
+  const [showSync, setShowSync] = useState(false)
+  
+  useEffect(() => {
+    // v273: Delay heavy background workers to let the main page load first
+    const timer = setTimeout(() => setShowSync(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
   if (isLoginPage) {
     return <main>{children}</main>
   }
@@ -53,8 +61,12 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
   return (
     <div className="admin-layout">
       <ServiceWorkerRegistration />
-      <GlobalSyncWorker />
-      <OfflinePrefetcher urls={pagesToPrefetch} />
+      {showSync && (
+        <>
+          <GlobalSyncWorker />
+          <OfflinePrefetcher urls={pagesToPrefetch} />
+        </>
+      )}
       <Sidebar />
       <main className="admin-content">
         {!isOnline && (

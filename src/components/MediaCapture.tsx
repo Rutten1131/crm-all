@@ -171,7 +171,7 @@ export default function MediaCapture({
           setIsStreamActive(false)
         }
 
-        if (skipTranscription) {
+        if (skipTranscription || !navigator.onLine) {
           onCapture(videoBlob, mode, '')
         } else {
           let transcriptionBlob: Blob

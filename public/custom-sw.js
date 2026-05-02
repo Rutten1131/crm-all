@@ -346,7 +346,36 @@ async function rscStaleWhileRevalidate(request) {
   }
 
   // v251: Ensure we NEVER return null to respondWith()
-  return fetchPromise.then(res => res || Response.error());
+  return fetchPromise.then(async res => {
+    if (res) return res;
+
+    // v287: Fallback to Universal RSC Shell if SWR fails (Network + Cache Miss)
+    const isAdminProjectRsc = url.pathname.match(/\/admin\/proyectos\/\d+/);
+    const isOperatorProjectRsc = url.pathname.match(/\/admin\/operador\/proyecto\/\d+/) || 
+                                 url.pathname.match(/\/operador\/proyecto\/\d+/) ||
+                                 url.pathname.includes('/operador/proyecto/');
+
+    if (isAdminProjectRsc || isOperatorProjectRsc) {
+      const rscCache = await caches.open(RSC_CACHE);
+      const pagesCache = await caches.open(PAGES_CACHE);
+      const staticCache = await caches.open(STATIC_CACHE);
+
+      const findShellInAllCaches = async (path) => {
+        return await rscCache.match(path) || 
+               await pagesCache.match(path) || 
+               await staticCache.match(path) ||
+               await caches.match(path + '?_rsc=1', { ignoreVary: true }) ||
+               await caches.match(path, { ignoreVary: true, ignoreSearch: true });
+      };
+
+      const shellPath = isAdminProjectRsc ? '/admin/proyectos/offline-shell' : '/admin/operador/proyecto/offline-shell';
+      console.log(`[SW ${VERSION}] RSC SWR Cache miss for project, serving Universal RSC Shell...`);
+      const shellMatch = await findShellInAllCaches(shellPath);
+      if (shellMatch) return shellMatch;
+    }
+
+    return Response.error();
+  });
 }
 
 /**
@@ -1418,11 +1447,17 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
       // v274: Notify UI that sync cycle finished
       const syncChannel = new BroadcastChannel('aquatech-sync');
       syncChannel.postMessage({ type: 'OUTBOX_SYNC_FINISHED' });
-      // v278: Close the sync notification when done
+      // v279: Aggressively close any sync notification when done to prevent hanging UI
       try {
-        const notifications = await self.registration.getNotifications({ tag: 'sync-progress' });
-        notifications.forEach(n => n.close());
-      } catch (e) {}
+        const allNotifications = await self.registration.getNotifications();
+        allNotifications.forEach(n => {
+          if (n.tag === 'sync-progress' || n.title.includes('Sincronizando')) {
+            n.close();
+          }
+        });
+      } catch (e) {
+        console.error('[SW] Failed to clear notifications:', e);
+      }
 
       resolve();
 

@@ -442,10 +442,13 @@ export default function GlobalSyncWorker() {
         const currentItem = await db.outbox.get(item.id!)
         if (!currentItem || currentItem.status === 'syncing') continue
 
-        // v261: Prevent infinite retries for items that failed too many times
+        // v280: Prevent infinite retries, but don't block forever. Cool down for 5 mins after 5 attempts.
         if ((currentItem.attempts || 0) >= 5) {
-          console.warn(`[Sync] Skipping item ${item.id} after 5 failed attempts`);
-          continue;
+          const minsSinceLastAttempt = (Date.now() - (currentItem.lastAttemptAt || currentItem.timestamp || 0)) / 60000;
+          if (minsSinceLastAttempt < 5) {
+            console.warn(`[Sync] Skipping item ${item.id} after 5 failed attempts (cooling down)`);
+            continue;
+          }
         }
 
         try {
@@ -816,11 +819,11 @@ export default function GlobalSyncWorker() {
     
     // Initial sync and cache refresh
     if (navigator.onLine) {
-      // Delay the initial outbox sync to let the main UI hydrate and render smoothly
+      // Fire immediately so pending items upload as soon as the app opens
       setTimeout(() => {
         syncOutbox()
         refreshCaches()
-      }, 5000); // 5s delay for immediate syncs
+      }, 500); // 500ms delay to avoid exact collision with hydration
 
       // v274: Delayed start for bulk sync to avoid LCP/Hydration contention
       setTimeout(() => {

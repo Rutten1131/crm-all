@@ -11,9 +11,7 @@ import { generateProfessionalPDF } from '@/lib/pdf-generator'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { PROJECT_TYPES, translateType, PROJECT_CATEGORIES, translateCategory } from '@/lib/constants'
 import { db } from '@/lib/db'
-import dynamic from 'next/dynamic'
-
-const CameraCapture = dynamic(() => import('@/components/camera/CameraCapture'), { ssr: false })
+import CameraCapture from '@/components/camera/CameraCapture'
 
 interface ProjectCreationWizardProps {
   panelBase?: string; // e.g. "/admin/proyectos" or "/admin/operador"

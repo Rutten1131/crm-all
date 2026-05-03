@@ -1,98 +1,85 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import fs from 'fs'
-import path from 'path'
+import { NextRequest, NextResponse } from 'next/server';
+import { writeFile, mkdir, readFile, unlink } from 'fs/promises';
+import { existsSync } from 'fs';
+import path from 'path';
 
-// Temporary directory for chunks
-const CHUNKS_DIR = path.join(process.cwd(), 'temp_chunks')
+// CRÍTICO: Desactivar el body parser de Next.js para permitir archivos grandes
+// Nota: En Next.js App Router, config exportada no funciona igual que en Pages Router para bodyParser.
+// Sin embargo, mantenemos la intención y usamos la configuración compatible.
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutos máximo por request en VPS
 
-if (!fs.existsSync(CHUNKS_DIR)) {
-  fs.mkdirSync(CHUNKS_DIR, { recursive: true })
-}
+const TEMP_DIR = path.join(process.cwd(), 'tmp', 'chunks');
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const formData = await req.formData();
+    const chunk = formData.get('chunk') as File;
+    const uploadId = formData.get('uploadId') as string;
+    const chunkIndex = parseInt(formData.get('chunkIndex') as string);
+    const totalChunks = parseInt(formData.get('totalChunks') as string);
+    const filename = formData.get('filename') as string;
+
+    if (!chunk || !uploadId || isNaN(chunkIndex) || isNaN(totalChunks)) {
+      return NextResponse.json({ error: 'Parámetros inválidos' }, { status: 400 });
     }
 
-    const formData = await request.formData()
-    const chunk = formData.get('chunk') as Blob
-    const uploadId = formData.get('uploadId') as string
-    const chunkIndex = parseInt(formData.get('chunkIndex') as string)
-    const totalChunks = parseInt(formData.get('totalChunks') as string)
-    const filename = formData.get('filename') as string || 'upload'
+    // Guardar chunk en disco temporal
+    const uploadDir = path.join(TEMP_DIR, uploadId);
+    if (!existsSync(uploadDir)) await mkdir(uploadDir, { recursive: true });
 
-    if (!chunk || !uploadId) {
-      return NextResponse.json({ error: 'Missing chunk or uploadId' }, { status: 400 })
+    const chunkBuffer = Buffer.from(await chunk.arrayBuffer());
+    await writeFile(path.join(uploadDir, `chunk_${chunkIndex}`), chunkBuffer);
+
+    // Si no es el último chunk, confirmar recepción
+    if (chunkIndex < totalChunks - 1) {
+      return NextResponse.json({ received: true, chunk: chunkIndex });
     }
 
-    const chunkPath = path.join(CHUNKS_DIR, `${uploadId}_${chunkIndex}`)
-    const buffer = Buffer.from(await chunk.arrayBuffer())
-    fs.writeFileSync(chunkPath, buffer)
+    // Último chunk — ensamblar el archivo completo
+    const allChunkFiles = [];
+    for (let i = 0; i < totalChunks; i++) {
+      allChunkFiles.push(path.join(uploadDir, `chunk_${i}`));
+    }
 
-    // Check if all chunks have arrived
-    const chunks = fs.readdirSync(CHUNKS_DIR).filter(f => f.startsWith(uploadId + '_'))
-    
-    if (chunks.length === totalChunks) {
-      console.log(`[ChunkUpload] All ${totalChunks} chunks received for ${uploadId}. Assembling...`)
-      
-      const finalPath = path.join(CHUNKS_DIR, `${uploadId}_final`)
-      const writeStream = fs.createWriteStream(finalPath)
+    const buffers = await Promise.all(allChunkFiles.map(f => readFile(f)));
+    const completeBuffer = Buffer.concat(buffers);
 
-      for (let i = 0; i < totalChunks; i++) {
-        const partPath = path.join(CHUNKS_DIR, `${uploadId}_${i}`)
-        const data = fs.readFileSync(partPath)
-        writeStream.write(data)
-        fs.unlinkSync(partPath) // Delete chunk after writing
+    // Subir el archivo completo a BunnyNet
+    const storageZone = process.env.BUNNY_STORAGE_ZONE!;
+    const accessKey = process.env.BUNNY_ACCESS_KEY!;
+    const storageHost = process.env.BUNNY_STORAGE_HOST || 'storage.bunnycdn.com';
+    const pullZoneUrl = process.env.BUNNY_CDN_URL!;
+
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const timestamp = Date.now();
+    const remotePath = `uploads/${timestamp}-${safeName}`;
+
+    const bunnyRes = await fetch(
+      `https://${storageHost}/${storageZone}/${remotePath}`,
+      {
+        method: 'PUT',
+        headers: {
+          'AccessKey': accessKey,
+          'Content-Type': 'application/octet-stream',
+        },
+        body: completeBuffer,
       }
-      writeStream.end()
+    );
 
-      // Wait for stream to finish
-      await new Promise<void>((resolve, reject) => {
-        writeStream.on('finish', () => resolve())
-        writeStream.on('error', reject)
-      })
+    // Limpiar chunks temporales
+    await Promise.all(allChunkFiles.map(f => unlink(f).catch(() => {})));
+    await import('fs/promises').then(fs => fs.rm(uploadDir, { recursive: true, force: true }).catch(() => {}));
 
-      try {
-        const fileBuffer = fs.readFileSync(finalPath)
-        
-        const storageZone = process.env.BUNNY_STORAGE_ZONE
-        const accessKey = process.env.BUNNY_STORAGE_API_KEY
-        const storageHost = process.env.BUNNY_STORAGE_HOST
-        const pullZoneUrl = process.env.BUNNY_PULLZONE_URL
-
-        const cleanName = filename.replace(/[^a-zA-Z0-9.-]/g, '_').toLowerCase()
-        const bunnyPath = `crm/uploads/${Date.now()}-${cleanName}`
-
-        const bunnyResp = await fetch(`https://${storageHost}/${storageZone}/${bunnyPath}`, {
-          method: 'PUT',
-          headers: {
-            'AccessKey': accessKey!,
-            'Content-Type': 'application/octet-stream',
-          },
-          body: fileBuffer
-        })
-
-        fs.unlinkSync(finalPath) // Delete final temp file
-
-        if (!bunnyResp.ok) {
-          return NextResponse.json({ error: 'Failed to upload to CDN' }, { status: 502 })
-        } else {
-          return NextResponse.json({ url: `${pullZoneUrl}/${bunnyPath}`, status: 'completed' })
-        }
-      } catch (err) {
-        console.error('[ChunkUpload] Error in final assembly/upload:', err)
-        return NextResponse.json({ error: 'Internal Server Error during assembly' }, { status: 500 })
-      }
+    if (!bunnyRes.ok) {
+      throw new Error(`BunnyNet upload failed: ${bunnyRes.status}`);
     }
 
-    return NextResponse.json({ status: 'chunk_received', index: chunkIndex })
+    const publicUrl = `${pullZoneUrl}/${remotePath}`;
+    return NextResponse.json({ url: publicUrl, success: true });
 
-  } catch (error) {
-    console.error('[ChunkUpload] error:', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  } catch (error: any) {
+    console.error('[API/upload/chunk] Error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -732,3 +732,13 @@ model Resource {
 
   @@map("resources")
 }
+
+model SyncLog {
+  id        Int      @id @default(autoincrement())
+  syncId    String   @unique @map("sync_id") @db.VarChar(100)
+  resultId  String   @map("result_id") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("sync_logs")
+}

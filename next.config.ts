@@ -54,12 +54,8 @@ const config: NextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: '50mb',
+      bodySizeLimit: '200mb',
     },
-    // v267: Client-side router cache — keeps fetched layouts/pages in memory
-    // so navigating back feels instant instead of re-fetching from server.
-    // dynamic: 30s means a page visited 30s ago won't be re-fetched.
-    // static: 300s = 5min for pages that don't change often.
     staleTimes: {
       dynamic: 30,
       static: 300,

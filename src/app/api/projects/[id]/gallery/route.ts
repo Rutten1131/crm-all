@@ -29,18 +29,24 @@ export async function GET(
   }
 }
 
-// Idempotency cache
-const processedSyncIds = new Map<string, any>();
-
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const syncId = request.headers.get('x-sync-id');
-    if (syncId && processedSyncIds.has(syncId)) {
-      console.log('[Idempotency] Skipping already processed gallery upload:', syncId);
-      return NextResponse.json(processedSyncIds.get(syncId));
+    if (syncId) {
+      const existingSync = await prisma.syncLog.findUnique({
+        where: { syncId }
+      });
+      if (existingSync) {
+        console.log('[Idempotency] Skipping already processed gallery sync:', syncId);
+        // Intentar recuperar el item original
+        const existingItem = await prisma.projectGalleryItem.findUnique({
+          where: { id: Number(existingSync.resultId) }
+        });
+        return NextResponse.json(existingItem || { success: true, id: existingSync.resultId });
+      }
     }
     const session = await getServerSession(authOptions)
     if (!session || !session.user) {
@@ -89,8 +95,12 @@ export async function POST(
     })
 
     if (syncId) {
-      processedSyncIds.set(syncId, newItem);
-      setTimeout(() => processedSyncIds.delete(syncId), 60 * 60 * 1000);
+      await prisma.syncLog.create({
+        data: {
+          syncId,
+          resultId: String(newItem.id)
+        }
+      }).catch(err => console.error('[Idempotency] Failed to save sync log:', err));
     }
 
     return NextResponse.json(newItem, { status: 201 })

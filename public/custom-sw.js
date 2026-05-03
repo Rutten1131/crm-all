@@ -1,12 +1,27 @@
 // ============================================================
-// Aquatech CRM — Custom Service Worker v273
-// v273: Chunked Media Upload & Robust Shell Recovery
+// Aquatech CRM — Custom Service Worker v300
+// v300: Push Notifications Fix & 200MB Chunked Uploads
 // ============================================================
 const STATIC_CACHE = 'aquatech-static';
 const PAGES_CACHE  = 'aquatech-pages';
 const ASSETS_CACHE = 'aquatech-assets';
 const FONTS_CACHE  = 'aquatech-fonts';
 const RSC_CACHE    = 'aquatech-rsc';
+
+function getUploadTimeout(sizeInBytes) {
+  if (sizeInBytes < 1 * 1024 * 1024)    return 120_000;   // <1MB    → 2 min
+  if (sizeInBytes < 10 * 1024 * 1024)   return 300_000;   // <10MB   → 5 min
+  if (sizeInBytes < 50 * 1024 * 1024)   return 600_000;   // <50MB   → 10 min
+  if (sizeInBytes < 100 * 1024 * 1024)  return 1_200_000; // <100MB  → 20 min
+  return 1_800_000;                                        // 200MB+  → 30 min
+}
+
+function getChunkSize(fileSizeBytes) {
+  if (fileSizeBytes < 5 * 1024 * 1024)   return 1 * 1024 * 1024;  // <5MB   → chunks 1MB
+  if (fileSizeBytes < 20 * 1024 * 1024)  return 3 * 1024 * 1024;  // <20MB  → chunks 3MB
+  if (fileSizeBytes < 100 * 1024 * 1024) return 8 * 1024 * 1024;  // <100MB → chunks 8MB
+  return 15 * 1024 * 1024;                                         // 200MB+ → chunks 15MB
+}
 
 // Only pre-cache truly PUBLIC files (no auth required)
 // v278: Added critical Admin routes to ensure list navigation works offline
@@ -30,7 +45,7 @@ const PRE_CACHE = [
   'https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400&display=swap'
 ];
 
-const VERSION = 'v289';
+const VERSION = 'v300';
 let precacheQueueSet = new Set(); // v291: Use a Set for robust pending count deduplication
 
 // v242: Helper to bypass Chrome's "redirected response" security block
@@ -1113,6 +1128,27 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
   }
 
   return new Promise((resolve, reject) => {
+    const GLOBAL_SYNC_TIMEOUT_MS = 45 * 60 * 1000; // 45 minutos máximo por ciclo completo
+    const globalSyncTimer = setTimeout(async () => {
+      console.warn('[SW] Timeout global de sync alcanzado. Liberando lock...');
+      isSyncingGlobal = false;
+      try {
+        const notifs = await self.registration.getNotifications();
+        notifs.forEach(n => { if (n.tag === 'sync-progress') n.close(); });
+      } catch(e) {}
+      try {
+        const dbT = await openAquatechDB();
+        const tx = dbT.transaction(['outbox'], 'readwrite');
+        const store = tx.objectStore('outbox');
+        const req = store.getAll();
+        req.onsuccess = () => {
+          for (const item of req.result) {
+            if (item.status === 'syncing') store.put({ ...item, status: 'pending' });
+          }
+        };
+      } catch(e) {}
+    }, GLOBAL_SYNC_TIMEOUT_MS);
+
     // Evitar race condition: Si la app está abierta, GlobalSyncWorker se encargará
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windowClients) => {
       // v272: Always process outbox items even if app is visible.
@@ -1212,27 +1248,47 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
       console.warn('[SW] Could not pre-fetch storage config');
     }
 
-    for (const item of pendingItems) {
-      // v272: Skip items whose project/context already failed
-      const ctx = item.projectId ? `proj-${item.projectId}` : ((item.type === 'DAY_START' || item.type === 'DAY_END') ? 'day-record' : null);
-      if (ctx && failedContexts.has(ctx)) {
-        console.log(`[SW] Skipping ${item.type} — earlier dependency for ${ctx} failed`);
-        // Reset to pending so it retries next cycle
-        await new Promise(r => { 
+      // v301: PROBLEMA 4 — Items zombie y Backoff exponencial
+      if (item.attempts >= 10) {
+        console.warn(`[SW] Item ${item.id} (${item.type}) eliminado tras 10 intentos fallidos (zombie)`);
+        await new Promise(r => {
           try {
-            const tx = db.transaction(['outbox'], 'readwrite'); 
-            const req = tx.objectStore('outbox').put({...item, status: 'pending'});
-            req.onsuccess = r; 
-            req.onerror = r;
+            const tx = db.transaction(['outbox'], 'readwrite');
+            tx.objectStore('outbox').delete(item.id);
+            tx.oncomplete = r;
+            tx.onerror = r;
           } catch(e) { r(); }
+        });
+        
+        // Notificar a la UI
+        self.clients.matchAll().then(clients => {
+          clients.forEach(c => c.postMessage({
+            type: 'ITEM_DEAD',
+            itemId: item.id,
+            itemType: item.type,
+            reason: 'max_attempts_reached'
+          }));
         });
         continue;
       }
 
-      // Re-verificamos el backup de reintentos
-      if (item.attempts >= 5) {
-        const hoursSinceLastAttempt = (now - (item.lastAttemptAt || item.timestamp)) / 3600000;
-        if (hoursSinceLastAttempt < 1) continue;
+      // Backoff exponencial: esperar más tiempo entre intentos
+      if (item.attempts > 0) {
+        const waitMs = Math.min(1000 * Math.pow(2, item.attempts), 300_000); // máx 5 min
+        const timeSinceLastAttempt = now - (item.lastAttemptAt || 0);
+        if (timeSinceLastAttempt < waitMs) {
+          console.log(`[SW] Item ${item.id} en backoff (${Math.round((waitMs - timeSinceLastAttempt)/1000)}s restantes)`);
+          // Reset status to pending so it can be picked up later
+          await new Promise(r => {
+            try {
+              const tx = db.transaction(['outbox'], 'readwrite');
+              tx.objectStore('outbox').put({ ...item, status: 'pending' });
+              tx.oncomplete = r;
+              tx.onerror = r;
+            } catch(e) { r(); }
+          });
+          continue;
+        }
       }
 
       // v294: PROBLEMA 3 — Retry del storageConfig dentro del ciclo si el item tiene media
@@ -1307,7 +1363,7 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
             if (!config) throw new Error('storageConfig not available — aborting media sync');
             const payload = { ...item.payload };
 
-            const uploadMediaSW = async (source, name, subfolder = 'general') => {
+            const uploadMediaSW = async (source, name, mimeType, subfolder = 'general') => {
               try {
                 let blob;
                 if (source instanceof Blob) {
@@ -1348,7 +1404,7 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
                     'Content-Type': blob.type || 'application/octet-stream' 
                   },
                   body: blob
-                }), 90000); // 90s for large files
+                }), getUploadTimeout(blob.size)); // ← dinámico según tamaño
                 if (!res.ok) throw new Error(`Bunny upload failed with status ${res.status}`);
                 return `${config.pullZoneUrl}/${folderPath}/${timestamp}-${safeName}`;
               } catch (e) {
@@ -1358,11 +1414,10 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
             };
 
             const uploadInChunksSW = async (blob, filename) => {
-              console.log(`[SW] Starting chunked upload for ${filename} (${blob.size} bytes)`);
-              // v278: Increased chunk size to 4MB for faster background sync
-              const CHUNK_SIZE = 4 * 1024 * 1024; 
+              const CHUNK_SIZE = getChunkSize(blob.size);
               const totalChunks = Math.ceil(blob.size / CHUNK_SIZE);
               const uploadId = self.crypto.randomUUID();
+              console.log(`[SW] Chunked upload: ${filename} | ${(blob.size/1024/1024).toFixed(2)}MB | ${totalChunks} chunks de ${(CHUNK_SIZE/1024/1024).toFixed(0)}MB`);
 
               for (let i = 0; i < totalChunks; i++) {
                 const chunk = blob.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
@@ -1373,15 +1428,48 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
                 formData.append('totalChunks', totalChunks.toString());
                 formData.append('filename', filename);
 
-                // v286: Use fetchWithTimeout for chunked uploads
-                const res = await fetchWithTimeout(new Request('/api/upload/chunk', {
-                  method: 'POST',
-                  body: formData
-                }), 45000); // 45s for chunk
+                let chunkSuccess = false;
+                let chunkAttempts = 0;
 
-                if (!res.ok) throw new Error(`Chunk ${i} failed`);
-                const data = await res.json();
-                if (data.url) return data.url;
+                while (!chunkSuccess && chunkAttempts < 4) {
+                  chunkAttempts++;
+                  try {
+                    const chunkTimeout = getUploadTimeout(chunk.size) * chunkAttempts;
+                    const res = await fetchWithTimeout(
+                      new Request('/api/upload/chunk', { method: 'POST', body: formData }),
+                      chunkTimeout
+                    );
+                    if (!res.ok) throw new Error(`Chunk ${i} HTTP ${res.status}`);
+                    const data = await res.json();
+
+                    // Notificar progreso real
+                    try {
+                      await self.registration.showNotification('Aquatech — Subiendo archivo', {
+                        body: `${filename}: parte ${i + 1} de ${totalChunks}`,
+                        tag: 'sync-progress',
+                        silent: true,
+                      });
+                    } catch(e) {}
+
+                    // Notificar a la UI si está abierta
+                    self.clients.matchAll().then(clients => {
+                      clients.forEach(c => c.postMessage({
+                        type: 'UPLOAD_PROGRESS',
+                        filename,
+                        chunk: i + 1,
+                        totalChunks,
+                        percent: Math.round(((i + 1) / totalChunks) * 100)
+                      }));
+                    });
+
+                    if (data.url) return data.url;
+                    chunkSuccess = true;
+                  } catch(e) {
+                    console.warn(`[SW] Chunk ${i} intento ${chunkAttempts} falló:`, e.message);
+                    if (chunkAttempts >= 4) throw new Error(`Chunk ${i} falló después de 4 intentos`);
+                    await new Promise(r => setTimeout(r, 3000 * chunkAttempts)); // 3s, 6s, 9s
+                  }
+                }
               }
               return null;
             };
@@ -1390,24 +1478,26 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
             if (item.type === 'MESSAGE' || item.type === 'MEDIA_UPLOAD') {
               if (payload.media) {
                 const source = payload.media.base64 || payload.media.url;
-                if (source && (source.startsWith('data:') || source.startsWith('blob:'))) {
-                  payload.media.url = await uploadMediaSW(source, payload.media.filename, 'messages');
+                if (source && (source.startsWith('data:') || source.startsWith('blob:') || source instanceof ArrayBuffer)) {
+                  payload.media.url = await uploadMediaSW(source, payload.media.filename, payload.media.mimeType, 'messages');
                   delete payload.media.base64;
+                  delete payload.media.fileData; // v301: Cleanup ArrayBuffer from payload
                 }
               }
             }
 
             // 2. Handle EXPENSE
             if (item.type === 'EXPENSE' && payload.receiptPhoto) {
-              if (payload.receiptPhoto.startsWith('data:') || payload.receiptPhoto.startsWith('blob:')) {
-                payload.receiptPhoto = await uploadMediaSW(payload.receiptPhoto, 'receipt.jpg', 'expenses');
+              if (payload.receiptPhoto.startsWith('data:') || payload.receiptPhoto.startsWith('blob:') || payload.receiptPhoto instanceof ArrayBuffer) {
+                payload.receiptPhoto = await uploadMediaSW(payload.receiptPhoto, 'receipt.jpg', 'image/jpeg', 'expenses');
               }
             }
 
             // 3. Handle GALLERY_UPLOAD
             if (item.type === 'GALLERY_UPLOAD' && payload.url) {
-              if (payload.url.startsWith('data:') || payload.url.startsWith('blob:')) {
-                payload.url = await uploadMediaSW(payload.url, payload.filename || 'gallery_item.jpg', 'gallery');
+              if (payload.url.startsWith('data:') || payload.url.startsWith('blob:') || payload.url instanceof ArrayBuffer) {
+                payload.url = await uploadMediaSW(payload.url, payload.filename || 'gallery_item.jpg', payload.mimeType, 'gallery');
+                delete payload.fileData;
               }
             }
 
@@ -1487,7 +1577,7 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
               method,
               headers: { 
                 'Content-Type': 'application/json',
-                'x-sync-id': `sync-${item.id}-${item.timestamp}` // v261: Idempotency Key
+                'x-sync-id': item.syncId || `sync-${item.id}-${item.timestamp}` // v301: Prioritize explicit syncId
               },
               credentials: 'same-origin',
               body: JSON.stringify({ 
@@ -1559,6 +1649,7 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
       } catch (fatal) {
         console.error('[SW] Fatal error in outbox sync loop:', fatal);
       } finally {
+        clearTimeout(globalSyncTimer);
         try {
           const allNotifications = await self.registration.getNotifications();
           allNotifications.forEach(n => {
@@ -1598,6 +1689,7 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
   });
 }
 
+// ─── BACKGROUND SYNC ───────────────────────────────────────
 // ─── BACKGROUND SYNC ───────────────────────────────────────
 // v288: The "Robot" — wakes up when internet returns
 self.addEventListener('sync', (event) => {

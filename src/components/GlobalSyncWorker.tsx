@@ -15,6 +15,7 @@ export default function GlobalSyncWorker() {
   const router = useRouter()
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<any>(null);
   const syncLock = useRef(false)
   const outboxLock = useRef(false) // v272: Separate lock — outbox sync must NEVER be blocked by bulk sync
   
@@ -42,6 +43,20 @@ export default function GlobalSyncWorker() {
     }
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // v300: Listen for REAL upload progress from Service Worker
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'UPLOAD_PROGRESS') {
+        setUploadProgress(event.data);
+      } else if (event.data?.type === 'OUTBOX_SYNC_FINISHED') {
+        setTimeout(() => setUploadProgress(null), 3000); // 3s extra visibility
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
   }, []);
   
   // States for bulk cache sync (background)
@@ -877,5 +892,43 @@ export default function GlobalSyncWorker() {
     }
   }, [])
 
-  return null // This acts purely as a background worker injected into the layout
+  if (!uploadProgress) return null;
+
+  return (
+    <div className="fixed bottom-20 right-4 z-[9999] w-72 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="bg-black/80 backdrop-blur-xl border border-white/10 p-5 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-0.5">Sincronizando Multimedia</span>
+            <span className="text-sm font-semibold text-white truncate max-w-[180px]">
+              {uploadProgress.filename}
+            </span>
+          </div>
+          <div className="bg-blue-500/10 px-2 py-1 rounded-lg border border-blue-500/20">
+            <span className="text-xs text-blue-400 font-black font-mono">
+              {uploadProgress.percent}%
+            </span>
+          </div>
+        </div>
+        
+        <div className="relative h-2 w-full bg-white/5 rounded-full overflow-hidden">
+          <div 
+            className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-indigo-500 transition-all duration-500 ease-out shadow-[0_0_10px_rgba(37,99,235,0.5)]"
+            style={{ width: `${uploadProgress.percent}%` }}
+          />
+        </div>
+        
+        <div className="flex justify-between items-center mt-3">
+          <p className="text-[10px] text-zinc-500 font-medium">
+            Parte <span className="text-zinc-300 font-bold">{uploadProgress.chunk}</span> de <span className="text-zinc-300 font-bold">{uploadProgress.totalChunks}</span>
+          </p>
+          <div className="flex gap-1">
+            <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
+            <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse delay-75" />
+            <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse delay-150" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

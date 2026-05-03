@@ -15,9 +15,11 @@ import {
 import { useSession } from 'next-auth/react'
 import { formatToEcuador, ECUADOR_TIMEZONE, formatTimeEcuador, formatDateEcuador } from '@/lib/date-utils'
 import { compressImage as optimizedCompress, isCompressibleImage, blobToBase64 } from '@/lib/image-optimization'
+import { prepareFileForOutbox, generateSyncId } from '@/lib/offline-utils'
 
 import Link from 'next/link'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
+import { useOutboxStatus } from '@/hooks/useOutboxStatus'
 import ProjectChatUnified from './chat/ProjectChatUnified'
 import { translateType, translateCategory } from '@/lib/constants'
 import { formatDate } from '@/lib/date-utils'
@@ -43,6 +45,7 @@ export default function ProjectExecutionClient({
   const searchParams = useSearchParams()
   const { data: session } = useSession()
   const [isPending, startTransition] = useTransition()
+  const { pending: globalPending, syncing: isSyncingGlobal, failed: globalFailed } = useOutboxStatus()
 
   // 2. Connectivity & Mode States (Consolidated)
   const [isOnline, setIsOnline] = useState(true)
@@ -969,7 +972,7 @@ export default function ProjectExecutionClient({
     }
     
     // Generate Sync ID for Idempotency
-    const syncId = `chat-op-${project.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const syncId = generateSyncId();
 
     // Determine type
     const determinedType = forcedType || (extraData?.amount ? 'EXPENSE_LOG' : (
@@ -1068,21 +1071,26 @@ export default function ProjectExecutionClient({
       if (!navigator.onLine || uploadErrorOccurred) {
          await db.transaction('rw', db.outbox, async () => {
            if (mediaFile) {
-             try {
-               // v294: PROBLEMA 1 — Convertir SIEMPRE a Base64 antes de guardar en outbox
-               const fileToStore = isCompressibleImage(mediaFile) ? await optimizedCompress(mediaFile) : mediaFile;
-               const base64 = await blobToBase64(fileToStore);
+              try {
+                // v301: PROBLEMA 1 — Binary storage (ArrayBuffer) for large files
+                const prep = await prepareFileForOutbox(mediaFile);
                 payload.media = {
-                  base64: base64,
-                  filename: mediaFile.name,
-                  mimeType: mediaFile.type || (isCompressibleImage(mediaFile) ? 'image/webp' : 'application/octet-stream'),
+                  filename: prep.filename,
+                  mimeType: prep.mimeType,
                   type: determinedType,
-                  category: 'CHAT'
+                  category: 'CHAT',
+                  storageType: prep.storageType
                 };
-             } catch (e) {
-               console.warn('[Offline] Media conversion failed:', e);
-             }
-           }
+                
+                if (prep.storageType === 'base64') {
+                  payload.media.base64 = prep.data;
+                } else {
+                  payload.media.fileData = prep.data; // ArrayBuffer saved directly to IndexedDB
+                }
+              } catch (e) {
+                console.warn('[Offline] Media preparation failed:', e);
+              }
+            }
 
            await db.outbox.add({
               type: 'MESSAGE',
@@ -1992,6 +2000,54 @@ export default function ProjectExecutionClient({
           scrollbarWidth: 'none',
           flexShrink: 0
       }}>
+        {/* v301: Sync Status Indicator */}
+        {(globalPending > 0 || isSyncingGlobal || globalFailed > 0) && (
+          <div style={{
+            position: 'fixed',
+            bottom: isSmallScreen ? '85px' : '20px',
+            right: '20px',
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            pointerEvents: 'none'
+          }}>
+            <div style={{
+              background: isSyncingGlobal ? 'var(--primary)' : (globalFailed > 0 ? '#ef4444' : 'rgba(255,255,255,0.1)'),
+              color: isSyncingGlobal ? '#000' : '#fff',
+              padding: '8px 16px',
+              borderRadius: '20px',
+              fontSize: '0.8rem',
+              fontWeight: 'bold',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              animation: isSyncingGlobal ? 'pulse 1.5s infinite' : 'none',
+              pointerEvents: 'auto'
+            }}>
+              {isSyncingGlobal ? (
+                <>
+                  <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+                  Sincronizando...
+                </>
+              ) : globalFailed > 0 ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4m0 4h.01"/></svg>
+                  {globalFailed} fallidos (reintentando)
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"/></svg>
+                  {globalPending} pendientes de subir
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {[
           { id: 'records', label: 'Registros', activeColor: 'var(--primary)', bgColor: 'rgba(0, 112, 192, 0.2)', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>, gradient: 'linear-gradient(135deg, #0070c0, #38bdf8)' },
           { id: 'chat', label: 'Chat', activeColor: '#25D366', bgColor: 'rgba(37, 211, 102, 0.2)', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>, gradient: 'linear-gradient(135deg, #128C7E, #25D366)' }

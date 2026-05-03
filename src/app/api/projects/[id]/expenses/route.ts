@@ -7,15 +7,20 @@ import { getLocalNow, forceEcuadorTZ } from '@/lib/date-utils'
 import { isAdmin } from '@/lib/rbac'
 import { notifyProjectTeam } from '@/lib/push'
 
-// Idempotency cache
-const processedSyncIds = new Map<string, any>();
-
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const syncId = req.headers.get('x-sync-id');
-    if (syncId && processedSyncIds.has(syncId)) {
-      console.log('[Idempotency] Skipping already processed expense:', syncId);
-      return NextResponse.json(processedSyncIds.get(syncId));
+    if (syncId) {
+      const existingSync = await prisma.syncLog.findUnique({
+        where: { syncId }
+      });
+      if (existingSync) {
+        console.log('[Idempotency] Skipping already processed expense sync:', syncId);
+        const existingExpense = await prisma.expense.findUnique({
+          where: { id: Number(existingSync.resultId) }
+        });
+        return NextResponse.json(existingExpense || { success: true, id: existingSync.resultId });
+      }
     }
     const { id } = await params
     const session = await getServerSession(authOptions)
@@ -154,9 +159,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     if (syncId) {
-      processedSyncIds.set(syncId, expense);
-      // TTL logic: remove after 1 hour
-      setTimeout(() => processedSyncIds.delete(syncId), 60 * 60 * 1000);
+      await prisma.syncLog.create({
+        data: {
+          syncId,
+          resultId: String(expense.id)
+        }
+      }).catch(err => console.error('[Idempotency] Failed to save sync log:', err));
     }
 
     return NextResponse.json(expense)

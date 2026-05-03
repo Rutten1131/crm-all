@@ -55,28 +55,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-// v262: Cache for idempotency keys to prevent duplicate chat messages
-const processedSyncIds = new Map<string, { timestamp: number }>();
-
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
     
-    // Check idempotency header
+    // v301: Robust DB-backed idempotency check
     const syncId = req.headers.get('x-sync-id');
     if (syncId) {
-      if (processedSyncIds.has(syncId)) {
-        console.log(`[Idempotency] Skipping already processed chat-sync-id: ${syncId}`);
-        return NextResponse.json({ success: true, message: 'Mensaje ya procesado' });
-      }
-      processedSyncIds.set(syncId, { timestamp: Date.now() });
-      
-      // Cleanup old keys (> 10 mins)
-      if (processedSyncIds.size > 1000) {
-        const now = Date.now();
-        for (const [key, val] of processedSyncIds.entries()) {
-          if (now - val.timestamp > 600000) processedSyncIds.delete(key);
-        }
+      const existingSync = await prisma.syncLog.findUnique({
+        where: { syncId }
+      });
+      if (existingSync) {
+        console.log(`[Idempotency] Skipping already processed sync-id: ${syncId}`);
+        return NextResponse.json({ 
+          success: true, 
+          id: Number(existingSync.resultId), 
+          isDuplicate: true 
+        });
       }
     }
 
@@ -159,6 +154,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       where: { id: projectId },
       select: { title: true }
     })
+
+    // v301: Register sync in log for persistent idempotency
+    if (syncId) {
+      await prisma.syncLog.create({
+        data: {
+          syncId,
+          resultId: String(msg.id)
+        }
+      }).catch(err => {
+        // We log it but don't fail the request since the message was already created
+        console.error('[Idempotency] Failed to save sync log:', err);
+      });
+    }
     const projectTitle = project?.title || 'Proyecto'
 
     // If it's an expense, record it in the expenses table too (EXCEPT if it's just a note)

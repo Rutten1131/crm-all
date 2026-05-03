@@ -3162,25 +3162,25 @@ export default function ProjectDetailClient({ project: initialProject, available
               <button 
                 onClick={() => {
                   setIsEditingPhases(true)
-                  setEditingPhases([...project.phases])
+                  setEditingPhases([...(project?.phases || [])])
                 }} 
                 className="btn btn-ghost btn-sm"
               >
                 Editar Fases
-            {!isEditingPhases && (
-                  <button onClick={() => {
-                    setEditingPhases([...(project?.phases || [])])
-                    setIsEditingPhases(true)
-                  }} className="btn btn-ghost btn-sm" style={{ padding: '4px 8px' }}>
-                    Editar Fases
-                  </button>
-                )}
-                {isEditingPhases && (
-                  <div style={{ display: 'flex', gap: '5px' }}>
-                    <button onClick={() => setIsEditingPhases(false)} className="btn btn-ghost btn-sm" style={{ padding: '4px 8px', color: 'var(--text-muted)' }} disabled={isSavingPhases}>Cancelar</button>
-                    <button onClick={handleSavePhases} className="btn btn-primary btn-sm" style={{ padding: '4px 8px' }} disabled={isSavingPhases}>{isSavingPhases ? '...' : 'Guardar'}</button>
-                  </div>
-                )}
+              </button>
+            ) : (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  onClick={() => setEditingPhases([...editingPhases, { id: 'new_' + Date.now(), title: '', description: '', estimatedDays: 0, status: 'PENDIENTE', isNew: true }])} 
+                  className="btn btn-secondary btn-sm" 
+                  disabled={isSavingPhases}
+                >
+                  + Agregar Fase
+                </button>
+                <button onClick={() => setIsEditingPhases(false)} className="btn btn-ghost btn-sm" disabled={isSavingPhases}>Cancelar</button>
+                <button onClick={handleSavePhases} className="btn btn-primary btn-sm" disabled={isSavingPhases}>{isSavingPhases ? 'Guardando...' : 'Guardar Cambios'}</button>
+              </div>
+            )}
           </div>
           <div style={{ padding: '10px 0', position: 'relative' }}>
             <div style={{ position: 'absolute', left: '16px', top: '20px', bottom: '20px', width: '2px', backgroundColor: 'var(--border-color)', zIndex: 0 }}></div>

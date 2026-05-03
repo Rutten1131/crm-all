@@ -733,9 +733,25 @@ async function networkFirst(request, cacheName, timeout = 10000) {
   try {
     const response = await fetchWithTimeout(request, timeout);
     
-    // v272: If server returns error (502, 500), try fallback to cache
-    if (!response.ok && response.status >= 500) {
-      throw new Error(`HTTP ${response.status}`);
+    // v272/v302: If server returns error (502, 500) OR a 404 for a chunk, handle it
+    if (!response.ok) {
+      if (response.status >= 500) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      if (response.status === 404 && isNextChunk) {
+        console.warn(`[SW] Chunk obsoleto detectado en red (404): ${url.pathname}. Forzando recarga...`);
+        caches.keys().then(keys => {
+          keys.forEach(k => {
+            if (k.startsWith('aquatech-pages') || k.startsWith('aquatech-rsc')) {
+              caches.delete(k);
+            }
+          });
+        });
+        return new Response(
+          'window.location.reload(true);',
+          { status: 200, headers: { 'Content-Type': 'application/javascript' } }
+        );
+      }
     }
 
     // v233: NEVER cache errors (500) or redirects
@@ -801,6 +817,8 @@ async function cacheFirst(request, cacheName) {
  */
 async function staleWhileRevalidate(request, cacheName) {
   if (request.method !== 'GET') return fetch(request);
+  const url = new URL(request.url);
+  const isNextChunk = url.pathname.includes('/_next/static/') && url.pathname.endsWith('.js');
   const cached = await caches.match(request, { ignoreVary: true });
   
   const fetchPromise = fetch(request).then(response => {
@@ -811,6 +829,24 @@ async function staleWhileRevalidate(request, cacheName) {
         cache.put(request, responseToCache).catch(() => {});
       });
     }
+
+    // v302: Auto-recuperación de ChunkLoadError. 
+    // Si un chunk falla (404 por nuevo build), limpiamos el caché de páginas y forzamos recarga.
+    if (response && response.status === 404 && isNextChunk) {
+      console.warn(`[SW] Chunk obsoleto detectado (404): ${url.pathname}. Limpiando caché y recargando...`);
+      caches.keys().then(keys => {
+        keys.forEach(k => {
+          if (k.startsWith('aquatech-pages') || k.startsWith('aquatech-rsc')) {
+            caches.delete(k);
+          }
+        });
+      });
+      return new Response(
+        'window.location.reload(true);',
+        { status: 200, headers: { 'Content-Type': 'application/javascript' } }
+      );
+    }
+
     return response;
   }).catch(() => null);
 

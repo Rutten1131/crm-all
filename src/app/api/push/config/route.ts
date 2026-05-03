@@ -6,7 +6,10 @@ export async function GET() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
   
   if (!publicKey) {
-    return NextResponse.json({ error: 'VAPID public key not configured' }, { status: 500 })
+    return NextResponse.json({ 
+      error: 'VAPID public key not configured in server environment variables (.env)',
+      publicKey: null 
+    }, { status: 500 })
   }
 
   return NextResponse.json({ publicKey })

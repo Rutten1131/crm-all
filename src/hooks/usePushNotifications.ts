@@ -126,11 +126,18 @@ export function usePushNotifications() {
       if (!configRes.ok) {
         throw new Error('No se pudo obtener la configuración de notificaciones del servidor.');
       }
-      const { publicKey: vapidKey } = await configRes.json();
+      const { publicKey: vapidKey, error: serverError } = await configRes.json();
       
+      if (serverError) {
+        throw new Error(`Error del servidor: ${serverError}`);
+      }
+
       if (!vapidKey || vapidKey === 'dummy') {
         console.error('[PUSH] Invalid VAPID key received:', vapidKey);
-        return { success: false, error: 'La llave VAPID no está configurada correctamente en el servidor.' };
+        return { 
+          success: false, 
+          error: `Error de Configuración: La llave VAPID recibida es ${!vapidKey ? 'nula' : 'dummy'}. Verifica las variables NEXT_PUBLIC_VAPID_PUBLIC_KEY en el servidor.` 
+        };
       }
       
       console.log('[PUSH] Subscribing with dynamic VAPID key (first 10 chars):', vapidKey.substring(0, 10) + '...');

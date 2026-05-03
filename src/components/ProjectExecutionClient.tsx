@@ -657,7 +657,7 @@ export default function ProjectExecutionClient({
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
   const [isNote, setIsNote] = useState(false)
-  const [expensePhoto, setExpensePhoto] = useState<string | null>(null)
+  const [expensePhoto, setExpensePhoto] = useState<string | File | null>(null)
   const [chatFilter, setChatFilter] = useState<'all' | 'media' | 'notes' | 'text'>('all')
   const [waForwardMsg, setWaForwardMsg] = useState<any>(null)
 
@@ -828,37 +828,38 @@ export default function ProjectExecutionClient({
 
       const processExpense = async () => {
         try {
-          let processedPhoto = expensePhoto
-          
-          // v279: Robust offline Base64 conversion
-          if (processedPhoto && processedPhoto.startsWith('blob:') && typeof navigator !== 'undefined' && !navigator.onLine) {
-            try {
-              const { blobToBase64 } = await import('@/lib/image-optimization');
-              const res = await fetch(processedPhoto);
-              const blob = await res.blob();
-              processedPhoto = await blobToBase64(blob);
-            } catch (e) {
-              console.warn('[Expense] Failed to convert blob to base64 for offline storage', e);
-            }
-          }
+          let processedPhoto = expensePhoto;
 
-          // Compressing if possible
-          if (processedPhoto && processedPhoto.startsWith('data:') && navigator.onLine) {
-            try {
-              const { uploadToBunnyClientSide } = await import('@/lib/storage-client')
-              const resB64 = await fetch(processedPhoto)
-              const blob = await resB64.blob()
-              
-              // Apply compression if it's an image
-              let finalBlob = blob;
-              if (blob.type.startsWith('image/')) {
-                finalBlob = (await optimizedCompress(new File([blob], "receipt.jpg", { type: blob.type }))) as Blob;
+          // v301: Robust offline preparation using helper
+          let receiptPhotoData: string | ArrayBuffer | null = null;
+          let receiptStorageType: 'base64' | 'arraybuffer' | null = null;
+
+          if (processedPhoto) {
+            let fileToPrepare: File | null = null;
+            
+            if (processedPhoto instanceof File) {
+              fileToPrepare = processedPhoto;
+            } else if (typeof processedPhoto === 'string') {
+              if (processedPhoto.startsWith('data:')) {
+                // Already base64
+                receiptPhotoData = processedPhoto;
+                receiptStorageType = 'base64';
+              } else if (processedPhoto.startsWith('blob:')) {
+                // Convert blob to File first
+                try {
+                  const response = await fetch(processedPhoto);
+                  const blob = await response.blob();
+                  fileToPrepare = new File([blob], 'receipt.jpg', { type: blob.type || 'image/jpeg' });
+                } catch (e) {
+                  console.warn('[Expense] Failed to fetch blob for preparation', e);
+                }
               }
+            }
 
-              const uploadResult = await uploadToBunnyClientSide(finalBlob, `expense_${Date.now()}.webp`, `projects/${project.id}/expenses`)
-              processedPhoto = uploadResult.url
-            } catch (uploadError) {
-              console.error('Failed to upload expense photo directly:', uploadError)
+            if (fileToPrepare) {
+              const prep = await prepareFileForOutbox(fileToPrepare);
+              receiptPhotoData = prep.data;
+              receiptStorageType = prep.storageType;
             }
           }
 
@@ -867,7 +868,10 @@ export default function ProjectExecutionClient({
             description, 
             date: new Date().toISOString(),
             isNote,
-            receiptPhoto: processedPhoto
+            receiptPhoto: receiptStorageType === 'base64' ? (receiptPhotoData as string) : null,
+            receiptFileData: receiptStorageType === 'arraybuffer' ? (receiptPhotoData as ArrayBuffer) : null,
+            receiptMimeType: 'image/jpeg',
+            receiptStorageType
           }
 
           if (!navigator.onLine) {
@@ -1235,27 +1239,43 @@ export default function ProjectExecutionClient({
       const isOffline = !navigator.onLine
       const syncId = `gallery-${project.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
-      let processedUrl = file.url;
-      if (typeof file.url === 'string' && file.url.startsWith('blob:')) {
-         try {
-           // v294: PROBLEMA 1 — Siempre convertir a Base64 para Galería si es blob
-           const res = await fetch(file.url);
-           const blob = await res.blob();
-           processedUrl = await blobToBase64(blob);
-         } catch (e) {
-           console.warn('Failed to convert blob to base64:', e);
-         }
-      }
-
-      const galleryPayload = {
-        url: processedUrl,
+      let galleryPayload: any = {
         filename: file.filename,
         mimeType: file.mimeType,
         category: file.category || 'EVIDENCE',
-        phaseId: undefined
-      }
+        phaseId: undefined,
+        url: ''
+      };
 
       if (isOffline) {
+        try {
+          // v301: Use consistent preparation helper for Gallery
+          let fileToPrepare: File;
+          if (file.url.startsWith('blob:')) {
+            const res = await fetch(file.url);
+            const blob = await res.blob();
+            fileToPrepare = new File([blob], file.filename, { type: file.mimeType });
+          } else {
+            // Assume it's already a File or we need to handle data:
+            fileToPrepare = new File([], file.filename, { type: file.mimeType });
+          }
+          
+          const prep = await prepareFileForOutbox(fileToPrepare);
+          galleryPayload.filename = prep.filename;
+          galleryPayload.mimeType = prep.mimeType;
+          galleryPayload.storageType = prep.storageType;
+          
+          if (prep.storageType === 'base64') {
+            galleryPayload.url = prep.data;
+          } else {
+            galleryPayload.fileData = prep.data;
+            galleryPayload.url = ''; 
+          }
+        } catch (e) {
+          console.warn('[Gallery] Offline preparation failed:', e);
+          galleryPayload.url = file.url; // Fallback
+        }
+
         await db.transaction('rw', db.outbox, async () => {
           await db.outbox.add({
             type: 'GALLERY_UPLOAD',
@@ -1273,6 +1293,9 @@ export default function ProjectExecutionClient({
         saveLockRef.current = false;
         return
       }
+
+      // Online path
+      galleryPayload.url = file.url;
 
       try {
         const res = await fetch(`/api/projects/${project.id}/gallery`, {

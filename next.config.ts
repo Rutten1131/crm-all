@@ -57,8 +57,8 @@ const config: NextConfig = {
       bodySizeLimit: '200mb',
     },
     staleTimes: {
-      dynamic: 30,
-      static: 300,
+      dynamic: 120,  // v338: 2 min freshness — evita refetch al navegar entre pestañas
+      static: 1800,  // 30 min para estático
     },
   },
 };

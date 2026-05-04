@@ -195,8 +195,6 @@ export default function OperatorDashboardClient({
 
   useEffect(() => {
     // v293: Reducido a 400ms para una respuesta instantánea al navegar.
-    // Dexie suele responder en <100ms, así que 400ms es un margen seguro
-    // para evitar el flash de "0 proyectos" si la query tarda un poco.
     const timer = setTimeout(async () => {
       if (projectsFromCache && projectsFromCache.length > 0) return 
       
@@ -204,6 +202,24 @@ export default function OperatorDashboardClient({
         const uId = user?.id || localUser?.id
         if (!uId) return
         const userId = Number(uId)
+        
+        // v339: Si la caché está vacía y estamos online, fetch inmediato de la API
+        const isOnline = typeof navigator !== 'undefined' && navigator.onLine
+        if (isOnline) {
+          try {
+            const res = await fetch('/api/operator/projects?userId=' + userId, { priority: 'high' })
+            if (res.ok) {
+              const apiProjects = await res.json()
+              if (Array.isArray(apiProjects) && apiProjects.length > 0) {
+                setEmergencyProjects(apiProjects)
+                try { localStorage.setItem('last_op_projects_snapshot', JSON.stringify(apiProjects)) } catch(e) {}
+                return // Ya tenemos datos, no necesitamos seguir con Dexie
+              }
+            }
+          } catch (e) {
+            console.warn('[OperatorDashboard] API fetch fallback failed:', e)
+          }
+        }
         
         const allProjects = await db.projectsCache
           .orderBy('lastAccessedAt').reverse().limit(500).toArray()

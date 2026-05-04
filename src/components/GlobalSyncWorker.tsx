@@ -828,8 +828,13 @@ export default function GlobalSyncWorker() {
        }
     }
 
-    if (hasSyncedAnything) {
-      router.refresh()
+    // v338: NO hacer router.refresh() aquí — causa recarga completa de página
+    // en admin/proyectos y rompe la experiencia. En su lugar, emitimos un evento
+    // ligero para que los componentes se actualicen solos si lo necesitan.
+    if (hasSyncedAnything && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('outbox-items-synced', { 
+        detail: { timestamp: Date.now() } 
+      }));
     }
 
     // v282/v302: Fix Infinite Sync Loop.

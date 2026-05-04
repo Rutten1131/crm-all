@@ -9,13 +9,8 @@ export default function ServiceWorkerRegistration() {
     const SW_VERSION = 'v338';
     const swUrl = `/custom-sw.js?v=${SW_VERSION}`
     console.log('[App] Solicitando registro de Robot v338 (Fetch Trigger)...');
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (refreshing) return;
-      refreshing = true;
-      console.log('[App] Nuevo Robot activo. Recargando...');
-      window.location.reload();
-    });
+    // v338: NO recargar la página cuando un nuevo SW toma control.
+    // El nuevo SW se activará en la próxima navegación sin recarga forzada.
 
     navigator.serviceWorker.register(swUrl, { scope: '/' })
       .then(async (registration) => {

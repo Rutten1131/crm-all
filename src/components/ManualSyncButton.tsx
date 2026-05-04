@@ -1,18 +1,38 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { db } from '@/lib/db'
 
 /**
  * ManualSyncButton — A standalone, zero-side-effect sync trigger.
  * 
- * It ONLY dispatches the 'trigger-bulk-sync' CustomEvent (already handled by GlobalSyncWorker)
- * and listens for progress/completion events. No direct DB, fetch, or router calls.
+ * Listens for bulk-cache-sync events from GlobalSyncWorker.
+ * On mount, checks IndexedDB to determine if sync was already completed.
  */
 export default function ManualSyncButton() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [progress, setProgress] = useState({ current: 0, total: 0 })
   const [lastSyncLabel, setLastSyncLabel] = useState('')
   const [cooldown, setCooldown] = useState(false)
+  const [syncFinished, setSyncFinished] = useState(false)
+
+  // v338: On mount, check if sync was already completed
+  useEffect(() => {
+    (async () => {
+      try {
+        const meta = await db.cacheMetadata.toArray();
+        const hasFinished = meta.some(m => m.status === 'idle' && m.lastSync && (Date.now() - m.lastSync) < 30 * 60 * 1000);
+        if (hasFinished) {
+          const lastMeta = meta.filter(m => m.status === 'idle').sort((a, b) => b.lastSync - a.lastSync)[0];
+          if (lastMeta?.lastSync) {
+            const label = new Date(lastMeta.lastSync).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
+            setLastSyncLabel(label);
+            setSyncFinished(true);
+          }
+        }
+      } catch (e) {}
+    })();
+  }, []);
 
   // Listen for sync events from GlobalSyncWorker
   useEffect(() => {
@@ -26,17 +46,20 @@ export default function ManualSyncButton() {
     const handleFinished = (e: any) => {
       setIsSyncing(false)
       setProgress({ current: 0, total: 0 })
-      setLastSyncLabel(new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' }))
-      // Cooldown: prevent spamming (30 seconds)
+      const label = new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })
+      setLastSyncLabel(label)
+      setSyncFinished(true)
       setCooldown(true)
       setTimeout(() => setCooldown(false), 30000)
+      // After 5 minutes, reset green state to normal
+      setTimeout(() => setSyncFinished(false), 300000)
     }
 
     const handleLog = (e: any) => {
-      // If GlobalSyncWorker emits a log about starting, mark us as syncing
       const msg = e.detail?.message || ''
-      if (msg.includes('Iniciando')) {
+      if (msg.includes('Iniciando sincronización masiva')) {
         setIsSyncing(true)
+        setSyncFinished(false)
       }
     }
 
@@ -88,11 +111,15 @@ export default function ManualSyncButton() {
         padding: '8px 14px',
         fontSize: '0.82rem',
         fontWeight: 600,
-        color: isSyncing ? 'var(--text-secondary, #888)' : 'var(--text-primary, #fff)',
+        color: isSyncing ? 'var(--text-secondary, #888)' : syncFinished ? '#10b981' : 'var(--text-primary, #fff)',
         background: isSyncing 
           ? 'var(--bg-tertiary, rgba(255,255,255,0.05))' 
+          : syncFinished
+          ? 'rgba(16, 185, 129, 0.12)'
           : 'var(--bg-secondary, rgba(255,255,255,0.08))',
-        border: '1px solid var(--border-primary, rgba(255,255,255,0.1))',
+        border: syncFinished 
+          ? '1px solid rgba(16, 185, 129, 0.3)' 
+          : '1px solid var(--border-primary, rgba(255,255,255,0.1))',
         borderRadius: '10px',
         cursor: isSyncing || cooldown ? 'not-allowed' : 'pointer',
         transition: 'all 0.2s ease',
@@ -141,6 +168,10 @@ export default function ManualSyncButton() {
           ? progress.total > 0
             ? `${progress.current}/${progress.total}`
             : 'Sincronizando...'
+          : syncFinished
+          ? `✓ ${lastSyncLabel}`
+          : lastSyncLabel
+          ? `Última: ${lastSyncLabel}`
           : 'Sincronizar'
         }
       </span>

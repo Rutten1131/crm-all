@@ -1,4 +1,4 @@
-const SW_VERSION = 'v336-real-sync';
+const SW_VERSION = 'v337-self-waking';
 const VERSION = SW_VERSION;
 const STATIC_CACHE = `aquatech-static-${SW_VERSION}`;
 const PAGES_CACHE  = `aquatech-pages-${SW_VERSION}`;
@@ -6,9 +6,55 @@ const ASSETS_CACHE = `aquatech-assets-${SW_VERSION}`;
 const FONTS_CACHE  = `aquatech-fonts-${SW_VERSION}`;
 const RSC_CACHE    = `aquatech-rsc-${SW_VERSION}`;
 
+// ─── v337: SELF-WAKING POLLER ───────────────────────────────
+// The ONLY reliable way to ensure background sync on mobile devices.
+// Sync events and online events are unreliable — the SW can be dormant
+// when connectivity changes. This poller checks the outbox every 60s
+// and processes pending items regardless of external triggers.
+// 
+// Stops polling when the outbox is empty to save battery.
+// Restarts via the global poller interval.
+let outboxPollerInterval = null;
+
+function startOutboxPoller() {
+  if (outboxPollerInterval) return; // Already running
+  
+  console.log('[SW] 🤖 Self-waking poller started (60s interval)');
+  outboxPollerInterval = setInterval(async () => {
+    try {
+      const db = await openAquatechDB();
+      const count = await new Promise((resolve) => {
+        const tx = db.transaction(['outbox'], 'readonly');
+        const req = tx.objectStore('outbox').count();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(0);
+      });
+      
+      if (count > 0 && !isSyncingGlobal) {
+        console.log(`[SW] Poller found ${count} pending items — waking robot!`);
+        await logSyncSW('info', `🔍 Poller encontró ${count} ítems pendientes — procesando`, 'poller').catch(() => {});
+        processOutboxSync(true).catch(() => {});
+      }
+    } catch (e) {
+      // Outbox might not be accessible yet, that's OK
+    }
+  }, 60000); // Every 60 seconds
+}
+
+function stopOutboxPoller() {
+  if (outboxPollerInterval) {
+    clearInterval(outboxPollerInterval);
+    outboxPollerInterval = null;
+    console.log('[SW] Poller stopped');
+  }
+}
+
+// Start poller immediately when SW loads
+startOutboxPoller();
+
 // v317: Auto-cleanup sync notifications on activation
 self.addEventListener('install', event => {
-  console.log(`[SW ${VERSION}] Robot v329 instalándose...`);
+  console.log(`[SW ${VERSION}] Robot ${SW_VERSION} instalándose...`);
   self.skipWaiting();
   event.waitUntil(
     caches.open(STATIC_CACHE)

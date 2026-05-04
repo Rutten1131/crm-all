@@ -44,9 +44,9 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
     
     if (isOp) {
       const base = role === 'SUBCONTRATISTA' ? '/admin/subcontratista' : '/admin/operador'
-      return [base, `${base}/nuevo`, `${base}/proyecto/offline-shell`, '/admin/inventario', '/admin/cotizaciones', '/admin/calendario']
+      return [base, `${base}/nuevo`, `${base}/proyecto/offline-shell`, '/admin/inventario', '/admin/cotizaciones', '/admin/cotizaciones/nuevo', '/admin/calendario']
     }
-    return ['/admin', '/admin/proyectos', '/admin/proyectos/offline-shell', '/admin/proyectos/nuevo', '/admin/inventario', '/admin/cotizaciones', '/admin/calendario']
+    return ['/admin', '/admin/proyectos', '/admin/proyectos/offline-shell', '/admin/proyectos/nuevo', '/admin/inventario', '/admin/cotizaciones', '/admin/cotizaciones/nuevo', '/admin/calendario']
   }
 
   const pagesToPrefetch = getPagesToPrefetch()

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useMemo } from 'react'
-import { compressImage as optimizedCompress, blobToBase64 } from '@/lib/image-optimization'
+import { compressImage as optimizedCompress, blobToBase64, isCompressibleImage } from '@/lib/image-optimization'
 
 // Inline SVG icons to avoid lucide-react webpack bundling issues
 const svgProps = (size: number) => ({
@@ -104,7 +104,7 @@ export default function ProjectUploader({
         const batch = filesArray.slice(i, i + batchSize);
         
         for (const file of batch) {
-          const isImage = file.type.startsWith('image/')
+          const isImage = isCompressibleImage(file)
 
           if (!isOnline) {
             let base64: string
@@ -354,7 +354,7 @@ export default function ProjectUploader({
           hidden 
           ref={fileInputRef}
           onChange={handleFileChange}
-          accept="image/*,video/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx"
+          accept="image/*,.heic,.heif,video/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx"
         />
       </div>
 

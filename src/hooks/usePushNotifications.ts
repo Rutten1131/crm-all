@@ -127,12 +127,12 @@ export function usePushNotifications() {
           return finishSub(false, 'Permiso denegado por el usuario.');
         }
 
-        // START TIMEOUT HERE: Only after user interacted, we set a 15s limit for the network parts.
+        // START TIMEOUT HERE: Only after user interacted, we set a 60s limit for the network parts.
         safetyTimeout = setTimeout(() => {
           isTimeout = true;
-          console.warn('[PUSH] Subscription network timed out after 15s');
+          console.warn('[PUSH] Subscription network timed out after 60s');
           finishSub(false, 'Tiempo de espera agotado al contactar con el servidor. Verifica tu conexión a internet.');
-        }, 15000);
+        }, 60000);
 
       // 2. Get service worker registration
       console.log('[PUSH] Waiting for Service Worker ready...');
@@ -179,22 +179,41 @@ export function usePushNotifications() {
 
       console.log('[PUSH] Subscription successful, sending to server...');
 
-      // 4. Send subscription to server
+      // 4. Send subscription to server (v316: Added retries for robustness)
       const subJson = subscription.toJSON();
-      const res = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subscription: {
-            endpoint: subJson.endpoint,
-            keys: {
-              p256dh: subJson.keys?.p256dh,
-              auth: subJson.keys?.auth
-            }
-          },
-          deviceName: getDeviceName()
-        })
-      });
+      let res: Response | undefined, lastErr: any;
+      
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          console.log(`[PUSH] Sending subscription to server (attempt ${attempt + 1})...`);
+          res = await fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subscription: {
+                endpoint: subJson.endpoint,
+                keys: {
+                  p256dh: subJson.keys?.p256dh,
+                  auth: subJson.keys?.auth
+                }
+              },
+              deviceName: getDeviceName()
+            })
+          });
+          if (res.ok) break; // Success!
+        } catch (e) {
+          lastErr = e;
+          console.warn(`[PUSH] Subscription attempt ${attempt + 1} failed:`, e);
+          if (attempt < 2) await new Promise(r => setTimeout(r, 3000)); // Wait 3s before retry
+        }
+      }
+
+      if (isTimeout) return;
+
+      if (!res) {
+        clearTimeout(safetyTimeout);
+        return finishSub(false, `Sin conexión al servidor tras 3 intentos. ${lastErr?.message || ''}`);
+      }
 
       if (isTimeout) return;
 

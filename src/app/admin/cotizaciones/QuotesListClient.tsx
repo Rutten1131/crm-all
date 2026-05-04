@@ -205,7 +205,7 @@ export default function QuotesListClient({ initialQuotes, activeProjects = [] }:
         </div>
         
         <Link 
-          href={typeof navigator !== 'undefined' && !navigator.onLine ? "/admin/cotizaciones/offline" : "/admin/cotizaciones/nuevo"} 
+          href="/admin/cotizaciones/nuevo" 
           className="btn btn-primary btn-sm" 
           style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
@@ -296,7 +296,7 @@ export default function QuotesListClient({ initialQuotes, activeProjects = [] }:
                     </div>
                     <div style={{ color: 'var(--text-muted)' }}>No se encontraron cotizaciones en esta vista.</div>
                     <Link 
-                      href={typeof navigator !== 'undefined' && !navigator.onLine ? "/admin/cotizaciones/offline" : "/admin/cotizaciones/nuevo"} 
+                      href="/admin/cotizaciones/nuevo" 
                       className="btn btn-primary"
                     >
                       Crear mi primera cotización

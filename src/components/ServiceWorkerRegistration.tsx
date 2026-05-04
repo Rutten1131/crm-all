@@ -5,9 +5,9 @@ import { useEffect } from 'react'
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
-    const SW_VERSION = 'v331'; 
+    const SW_VERSION = 'v332'; 
     const swUrl = `/custom-sw.js?v=${SW_VERSION}`
-    console.log('[App] Solicitando registro de Robot v331 (Syntax Fix)...');
+    console.log('[App] Solicitando registro de Robot v332 (No-Lock Fix)...');
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (refreshing) return;

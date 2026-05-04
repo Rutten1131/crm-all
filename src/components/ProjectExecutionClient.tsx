@@ -746,7 +746,8 @@ export default function ProjectExecutionClient({
     
     const list = [...(project?.gallery || []).filter((item: any) => {
       const cat = (item.category || '').toUpperCase();
-      return !item.isFromChat && (cat === 'EVIDENCE' || cat === 'FINALES' || cat === 'ENTREGA');
+      // v332: Support more tags for final delivery gallery
+      return !item.isFromChat && (cat === 'EVIDENCE' || cat === 'FINALES' || cat === 'ENTREGA' || cat === 'ENTREGA_FINAL' || cat === 'ADJUNTO' || cat === 'MASTER_FINAL');
     })].map((item: any) => {
       if (pendingDeletions.some((pdId: any) => String(pdId) === String(item.id))) return { ...item, isPendingDelete: true };
       return item;
@@ -755,8 +756,8 @@ export default function ProjectExecutionClient({
     const pendingEvidence = (pendingItems || []).filter((item: any) => {
       const isGalleryType = item.type === 'GALLERY_UPLOAD' || item.type === 'MEDIA_UPLOAD'
       const cat = (item.payload?.category || '').toUpperCase()
-      // v327: Fix 'Finales' visibility - support all final gallery tags
-      return isGalleryType && (cat === 'EVIDENCE' || cat === 'FINALES' || cat === 'ENTREGA' || cat === 'ENTREGA_FINAL');
+      // v332: Better matching logic to ensure visibility
+      return isGalleryType && (cat === 'EVIDENCE' || cat === 'FINALES' || cat === 'ENTREGA' || cat === 'ENTREGA_FINAL' || cat === 'ADJUNTO' || cat === 'MASTER_FINAL');
     }).map((item: any) => {
       const p = item.payload || {};
       let objUrl = '';

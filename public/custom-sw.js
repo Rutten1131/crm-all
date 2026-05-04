@@ -1,4 +1,4 @@
-const SW_VERSION = 'v331-syntax-fix';
+const SW_VERSION = 'v332-unlocked';
 const VERSION = SW_VERSION;
 const STATIC_CACHE = `aquatech-static-${SW_VERSION}`;
 const PAGES_CACHE  = `aquatech-pages-${SW_VERSION}`;
@@ -1328,17 +1328,21 @@ async function logSyncSW(level, message, type = 'general', details = '') {
 let isSyncingGlobal = false;
 // v317: Phase 2 - Web Locks to prevent cross-tab duplication
 async function processOutboxSync(isForced = false, specificType = null) {
-  if ('locks' in navigator) {
-    return navigator.locks.request('aquatech_outbox_lock', { ifAvailable: !isForced }, async (lock) => {
-      if (!lock) {
-        console.log('[SW] Sync lock not available, skipping concurrent execution.');
-        return;
-      }
-      console.log('[SW] Sync lock acquired. Starting processing...');
-      try {
-        await _internalProcessOutbox(isForced, specificType);
-      } finally {
-        console.log('[SW] Sync lock released.');
+  // v332: Removed navigator.locks that were causing permanent blocks
+  if (isSyncingGlobal && !isForced) {
+    console.log('[SW] Already syncing, skipping...');
+    return;
+  }
+
+  isSyncingGlobal = true;
+  console.log('[SW] Starting processOutboxSync...');
+  try {
+    await _internalProcessOutbox(isForced, specificType);
+  } catch (e) {
+    console.error('[SW] Sync failed:', e);
+  } finally {
+    isSyncingGlobal = false;
+    console.log('[SW] Sync finished.');
         // v317: Ensure notification is closed even if _internalProcessOutbox hangs or crashes
         try {
           const notifs = await self.registration.getNotifications();

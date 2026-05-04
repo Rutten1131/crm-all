@@ -35,7 +35,22 @@ export default function ProyectosPage() {
 
   useEffect(() => {
     async function checkAuth() {
-      // 1. Check online session first
+      // 1. If offline, ALWAYS check cached session immediately, ignoring NextAuth state
+      // because NextAuth session drops custom properties (like role) if the background fetch fails.
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const cached = await db.auth.get('last_session')
+        const authorized = cached && (
+          cached.role === 'ADMIN' || 
+          cached.role === 'SUPERADMIN' ||
+          cached.role === 'ADMINISTRADORA' ||
+          (cached.permissions && cached.permissions.includes('proyectos_admin'))
+        )
+        setIsAuthorized(!!authorized)
+        if (!authorized) router.push('/admin/login')
+        return; // Stop here, don't execute online logic
+      }
+
+      // 2. Online logic via NextAuth session
       if (status === 'authenticated') {
         const role = (session?.user as any)?.role
         const permissions = (session?.user as any)?.permissions
@@ -48,17 +63,6 @@ export default function ProyectosPage() {
         setIsAuthorized(!!authorized)
         if (!authorized) router.push('/admin')
       } 
-      // 2. If offline, check cached session immediately
-      else if (!navigator.onLine) {
-        const cached = await db.auth.get('last_session')
-        const authorized = cached && (
-          cached.role === 'ADMIN' || 
-          cached.role === 'SUPERADMIN' ||
-          cached.role === 'ADMINISTRADORA'
-        )
-        setIsAuthorized(!!authorized)
-        if (!authorized) router.push('/admin/login')
-      }
       // 3. If unauthenticated and online
       else if (status === 'unauthenticated' && navigator.onLine) {
         router.push('/admin/login')

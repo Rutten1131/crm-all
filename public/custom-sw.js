@@ -1,4 +1,4 @@
-const SW_VERSION = 'v321-industrial-sync';
+const SW_VERSION = 'v323-industrial-sync';
 const VERSION = SW_VERSION;
 const STATIC_CACHE = `aquatech-static-${SW_VERSION}`;
 const PAGES_CACHE  = `aquatech-pages-${SW_VERSION}`;
@@ -46,6 +46,7 @@ const PRE_CACHE = [
   '/admin/proyectos',
   '/admin/calendario',
   '/admin/cotizaciones',
+  '/admin/cotizaciones/nuevo',
   '/admin/inventario',
   '/offline.html',
   '/app-start.html',
@@ -1276,7 +1277,8 @@ self.addEventListener('periodicsync', (event) => {
 
 function openAquatechDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('AquatechOfflineDB', 15);
+    // v322: Abrir la DB sin especificar versión para no chocar con la versión 150 de Dexie
+    const request = indexedDB.open('AquatechOfflineDB');
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
     request.onblocked = () => {

@@ -206,6 +206,7 @@ export default function QuotesListClient({ initialQuotes, activeProjects = [] }:
         
         <Link 
           href="/admin/cotizaciones/nuevo" 
+          prefetch={true}
           className="btn btn-primary btn-sm" 
           style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >

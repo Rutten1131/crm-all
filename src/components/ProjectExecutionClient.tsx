@@ -134,20 +134,8 @@ export default function ProjectExecutionClient({
         const pendingItems = await db.outbox.where('status').equals('pending').toArray();
         const hasMedia = pendingItems.some(item => item.type === 'GALLERY_UPLOAD' || item.type === 'MEDIA_UPLOAD' || (item.type === 'MESSAGE' && item.payload.media));
 
-        if (hasMedia && 'backgroundFetch' in reg) {
-          try {
-            const syncId = `aquatech-media-sync-${Date.now()}`;
-            // We register the fetch. The SW will handle the actual requests or we can pass URLs.
-            // For now, we trigger a special fetch that the SW will intercept to process the outbox.
-            await (reg as any).backgroundFetch.fetch(syncId, ['/api/sync/background-trigger'], {
-              title: 'Sincronizando Multimedia Aquatech',
-              icons: [{ src: '/favicon.png', sizes: '192x192', type: 'image/png' }]
-            });
-            console.log('[Sync] Background Fetch registered for media');
-          } catch (bfErr) {
-            console.warn('[Sync] Background Fetch registration failed, falling back to normal sync', bfErr);
-          }
-        }
+        // Background fetch is disabled to prevent "Sincronización Fallida" OS notifications
+        // because the dummy fetch endpoint is intercepted but often fails OS-level checks.
 
         // Always register normal sync for lightweight items
         if ('sync' in reg) {

@@ -77,6 +77,7 @@ export default function CotizacionesPage() {
           <Link href="/admin/cotizaciones/materiales" className="btn btn-ghost">Ver Materiales</Link>
           <Link 
             href="/admin/cotizaciones/nuevo" 
+            prefetch={true}
             className="btn btn-primary"
           >
             + Nueva Cotización

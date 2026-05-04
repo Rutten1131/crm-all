@@ -41,7 +41,7 @@ function startOutboxPoller() {
       
       // Only log if count changed or every 8 checks (~2 min)
       if (count !== lastOutboxCount || pollerCheckCount % 8 === 0) {
-        const types = [...new Set(items.map((i: any) => i.type))].join(',');
+        const types = [...new Set(items.map(i => i.type))].join(',');
         if (count > 0) {
           console.log(`[SW] Poller #${pollerCheckCount}: ${count} items [${types}]`);
         }

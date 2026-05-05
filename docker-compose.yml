@@ -5,8 +5,7 @@ services:
     image: ghcr.io/activaqrnegocio-crypto/aquatech-render:latest
     container_name: aquatech-crm-v2
     restart: always
-    ports:
-      - "3000:3000"
+    network_mode: host
     env_file:
       - .env
     environment:

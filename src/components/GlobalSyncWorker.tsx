@@ -773,7 +773,7 @@ export default function GlobalSyncWorker() {
                  method,
                  headers: { 
                    'Content-Type': 'application/json',
-                   'x-sync-id': `sync-${item.id}-${item.timestamp}` 
+                   'x-sync-id': item.syncId || `sync-${item.id}-${item.timestamp}` 
                  },
                  body: JSON.stringify({ 
                    ...finalPayload, 

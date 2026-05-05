@@ -1,4 +1,4 @@
-const SW_VERSION = 'v339-fetch-trigger';
+const SW_VERSION = 'v340-online-fallback';
 const VERSION = SW_VERSION;
 const STATIC_CACHE = `aquatech-static-${SW_VERSION}`;
 const PAGES_CACHE  = `aquatech-pages-${SW_VERSION}`;
@@ -466,8 +466,8 @@ async function rscNetworkFirst(request) {
   try {
     // v302: Wrap everything in a secondary try/catch for extreme safety
     try {
-      // v268: Reduced RSC timeout to 8s for snappier mobile feel
-      const response = await fetchWithTimeout(request.clone(), 8000);
+      // v340: Increased RSC timeout to 20s for cold SSR
+      const response = await fetchWithTimeout(request.clone(), 20000);
       // v272: If server returns error (502, 500, 404), fallback to cache/shell
       if (!response.ok) {
         console.warn(`[SW ${VERSION}] RSC Network error ${response.status}, falling back to cache/shell...`);
@@ -532,7 +532,7 @@ async function rscStaleWhileRevalidate(request) {
     
     let cached = await cache.match(cacheKey) || await pagesCache.match(request.url);
     
-    const fetchPromise = fetchWithTimeout(request.clone(), 8000).then(async (response) => {
+    const fetchPromise = fetchWithTimeout(request.clone(), 20000).then(async (response) => {
       if (response && response.ok && !response.redirected) {
         const cacheToUpdate = await caches.open(RSC_CACHE);
         cacheToUpdate.put(cacheKey, response.clone());
@@ -591,123 +591,68 @@ async function navigationHandler(request) {
     }
 
     const isProjectDetail = url.pathname.match(/\/(proyecto|proyectos)\/\d+/);
-    const isDashboard = url.pathname === '/admin/proyectos' || url.pathname === '/admin/proyectos/' ||
-                        url.pathname === '/admin/operador' || url.pathname === '/admin/operador/';
-    const isCalendar = url.pathname === '/admin/calendario' || url.pathname === '/admin/calendario/';
-                        
-    let cached = null;
     
-    // v311 FIX: For specific project routes (e.g. /admin/proyectos/1094):
-    // ↳ If ONLINE → skip shell and go straight to network (no broken flash)
-    // ↳ If OFFLINE → serve shell immediately (fast offline experience)
-    // Dashboards and calendar still use cache-first (less data-intensive)
-    const isSpecificProjectRoute = isProjectDetail && 
-      url.pathname.match(/\/admin\/(proyectos|operador\/proyecto)\/\d+/);
-    
-    if (isSpecificProjectRoute && navigator.onLine) {
-      // ONLINE + Project route: Skip shell, go straight to network
-      // The cache update will happen below after network succeeds
-    } else if (isProjectDetail || isDashboard || isCalendar) {
-      // Direct shell search for projects (Fast path - used OFFLINE or for dashboards)
-      if (isProjectDetail) {
-        const shellUrl = url.pathname.includes('/operador/') 
-          ? '/admin/operador/proyecto/offline-shell' 
-          : '/admin/proyectos/offline-shell';
-        cached = await caches.match(shellUrl, { ignoreVary: true, ignoreSearch: true });
-        if (cached && isValidHTMLResponse(cached)) {
-          // console.log(`[SW v311] Offline shell: Serving project shell for ${url.pathname}`);
-          updatePageInBackground(request.clone(), url.pathname);
-          return cleanResponse(cached);
-        }
-      }
+    // v340: Simplified — just try network first, then cache, then let browser handle.
 
-      // Generic cache search (Dashboards, Calendar, or Project Fallback)
-      cached = await findCachedPage(request.url, url.pathname, false);
-      if (cached && isValidHTMLResponse(cached)) {
-        // console.log(`[SW v311] Cached page: Serving for ${url.pathname}`);
-        updatePageInBackground(request.clone(), url.pathname);
-        return cleanResponse(cached);
-      }
-    }
-
-    // ── STEP 2: Network first with timeout (v311: 8s)
-
+    // ── STEP 2: Network first with timeout (v340: 25s for cold SSR)
     try {
-      const response = await fetchWithTimeout(request.clone(), 8000);
+      const response = await fetchWithTimeout(request.clone(), 25000);
       if (response.ok) {
         const contentType = response.headers.get('Content-Type') || '';
         const isHTML = contentType.includes('text/html');
         const finalUrl = response.url || '';
-        const isLoginRedirect = finalUrl.includes('/login');
-        
-        // ONLY cache actual HTML responses, never RSC payloads or JSON
-        if (isHTML && !isLoginRedirect) {
+        if (isHTML && !finalUrl.includes('/login')) {
           const cache = await caches.open(PAGES_CACHE);
           cache.put(request.url, response.clone());
           const alt = request.url.endsWith('/') ? request.url.slice(0, -1) : request.url + '/';
           cache.put(alt, response.clone());
-          if (response.redirected && finalUrl) {
-            cache.put(finalUrl, response.clone());
-          }
-          // console.log('[SW] Cached page:', url.pathname);
-          // v222: Increased limit to preserve project shells (300 projects + margin)
+          if (response.redirected && finalUrl) cache.put(finalUrl, response.clone());
           trimCache(PAGES_CACHE, 400);
         }
       }
       return response;
-    } catch (e) {
+    } catch (_e) {
     }
 
-    // ── STEP 2.5: v289 — Project URL offline? Serve the correct shell immediately.
-    // This is faster than findCachedPage() because it goes direct, no scanning.
-    const isAdminProjectNav = url.pathname.match(/\/admin\/proyectos\/\d+/);
-    const isOperatorProjectNav = url.pathname.match(/\/admin\/operador\/proyecto\/\d+/) || 
-                                url.pathname.match(/\/operador\/proyecto\/\d+/);
-    
-    if (isAdminProjectNav || isOperatorProjectNav) {
-      const shellUrl = (isOperatorProjectNav || url.pathname.includes('/operador/'))
+    // ── STEP 3: Try cache / offline-shell ───────────────────
+    let cachedPage = await caches.match(request.url, { ignoreVary: true, ignoreSearch: true });
+    if (isValidHTMLResponse(cachedPage)) return cachedPage;
+
+    // Try the offline-shell for ANY admin/operator route
+    const isOpRoute = url.pathname.includes('/operador/') || url.pathname.includes('/admin/operador');
+    const isAdminProjRoute = url.pathname.includes('/admin/proyectos');
+    if (isOpRoute || isAdminProjRoute) {
+      const shellUrl = isOpRoute
         ? '/admin/operador/proyecto/offline-shell'
         : '/admin/proyectos/offline-shell';
-        
-      const directShell = await caches.match(shellUrl, { ignoreVary: true, ignoreSearch: true });
-      if (isValidHTMLResponse(directShell)) {
-        console.log(`[SW ${VERSION}] Emergency shell recovery for: ${url.pathname}`);
-        return cleanResponse(directShell);
+      const shell = await caches.match(shellUrl, { ignoreVary: true, ignoreSearch: true });
+      if (isValidHTMLResponse(shell)) {
+        console.log(`[SW v340] Serving offline-shell for: ${url.pathname}`);
+        return shell;
       }
-      
-      // Secondary fallback — search broadly in all caches for ANY project shell
+      // Search ALL caches (in case shell is in a different versioned cache)
       const allCaches = await caches.keys();
       for (const cName of allCaches) {
         const c = await caches.open(cName);
         const match = await c.match(shellUrl, { ignoreVary: true, ignoreSearch: true });
-        if (isValidHTMLResponse(match)) return cleanResponse(match);
+        if (isValidHTMLResponse(match)) {
+          console.log(`[SW v340] Shell found in cache '${cName}' for: ${url.pathname}`);
+          return match;
+        }
       }
     }
 
-
-    // ── STEP 3: Last chance — Try shells if network failed or we are offline
-    const shell = await findCachedPage(request.url, url.pathname, true); // true = force serve
-    if (shell) {
-      // v243: If we found a shell and it's NOT the absolute fallback, serve it.
-      // If it IS the absolute fallback (contains "Sin Conexión"), we only serve it if offline.
-      const isAbsoluteFallback = shell.headers.get('X-SW-Fallback') === 'absolute';
-      if (!isAbsoluteFallback || !navigator.onLine) {
-        // console.log('[SW] Serving shell or offline fallback');
-        return cleanResponse(shell);
-      }
-    }
-
-    // v243: If we are online but everything failed, throw to catch and retry or show real error
+    // ── STEP 4: If online, let browser handle it ────────────
     if (navigator.onLine) {
-      console.warn('[SW] Online but navigation failed, letting browser handle error');
-      throw new Error('Network failed but online');
+      console.log(`[SW v340] Online — letting browser handle: ${url.pathname}`);
+      return fetch(request);
     }
 
-    // ── STEP 4: Try offline.html
+    // ── STEP 5: Offline — try offline.html ──────────────────
     const offlinePage = await caches.match('/offline.html');
     if (offlinePage) return offlinePage;
 
-    // ── STEP 5: Inline fallback (absolute last resort)
+    // ── STEP 6: Absolute last resort ────────────────────────
     return new Response(
       '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
       '<title>Sin conexión</title></head>' +
@@ -715,12 +660,11 @@ async function navigationHandler(request) {
       '<h1 style="margin-bottom:16px;">📡 Sin conexión</h1>' +
       '<p style="color:#94a3b8;">Conecta a internet y recarga.</p>' +
       '<button onclick="window.location.reload()" style="margin-top:20px;padding:12px 24px;background:#3b82f6;color:white;border:none;border-radius:8px;cursor:pointer;">Reintentar</button>' +
-      '</body></html>', 
+      '</body></html>',
       { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
     );
   } catch (fatalError) {
     console.error('[SW] FATAL in navigation handler:', fatalError);
-    // Absolute fallback in case something throws unhandled error
     const offlinePage = await caches.match('/offline.html');
     if (offlinePage) return offlinePage;
     return new Response(
@@ -878,17 +822,23 @@ async function findCachedPage(requestUrl, pathname, forceServe = false) {
     }
   }
 
-  // v282: CRITICAL FIX — Instead of dead-end "Sin Conexión" page, auto-redirect
-  // to the offline-shell which contains the real app UI with Dexie data.
-  // The old fallback caused the "click does nothing" because the browser received
-  // a non-interactive HTML page with no Next.js router.
+  // v340: CRITICAL FIX — Dashboard shell fallback.
+  // When offline and visiting /admin/operador or /admin/proyectos (dashboards),
+  // serve the offline-shell instead of the dead-end "Sin Conexión" page.
+  // The shell contains the real Next.js app which can hydrate from Dexie data.
+  const isOperatorDashboard = pathname === '/admin/operador' || pathname === '/admin/operador/';
+  const isAdminDashboard = pathname === '/admin/proyectos' || pathname === '/admin/proyectos/';
   const isOpProject = pathname.match(/\/admin\/operador\/proyecto\//);
   const isAdmProject = pathname.match(/\/admin\/proyectos\//);
   const shellRedirect = isOpProject 
     ? '/admin/operador/proyecto/offline-shell'
     : isAdmProject 
       ? '/admin/proyectos/offline-shell'
-      : null;
+      : isOperatorDashboard
+        ? '/admin/operador/proyecto/offline-shell'
+        : isAdminDashboard
+          ? '/admin/proyectos/offline-shell'
+          : null;
       
   if (shellRedirect) {
     // v288: CRITICAL — STOP PHYSICAL REDIRECTS. Serve the shell content directly
@@ -896,10 +846,10 @@ async function findCachedPage(requestUrl, pathname, forceServe = false) {
     // logic to work without losing the project ID in the URL.
     const shellMatch = await caches.match(shellRedirect, { ignoreVary: true, ignoreSearch: true });
     if (isValidHTMLResponse(shellMatch)) {
-      // console.log(`[SW v288] Serving shell directly for: ${pathname}`);
+      // console.log(`[SW v340] Dashboard shell fallback for: ${pathname}`);
       return shellMatch;
     }
-    // console.warn(`[SW v288] Shell ${shellRedirect} not in cache, fallback to absolute.`);
+    // console.warn(`[SW v340] Shell ${shellRedirect} not in cache, fallback to absolute.`);
   }
   
   console.warn(`[SW ${VERSION}] No shell found in cache, serving absolute memory-fallback for: ${pathname}`);
@@ -2015,13 +1965,28 @@ const uploadInChunksSW = async (blob, filename, subfolder = 'uploads') => {
               }
             }
 
-            // v316: Also process media for PROJECT creation if provided
-            if (item.type === 'PROJECT' && (payload.image || payload.fileData)) {
-              const source = payload.fileData || payload.image;
-              if (source && (source instanceof ArrayBuffer || (typeof source === 'string' && (source.startsWith('data:') || source.startsWith('blob:'))))) {
-                payload.image = await uploadMediaSW(source, payload.filename || 'project_image.jpg', payload.mimeType, 'projects');
-                delete payload.fileData;
-                await persistProgress();
+            // v352: Process media for PROJECT creation — image + ALL attached files (videos, fotos, docs)
+            // Cada archivo se sube individualmente a Bunny CDN para evitar payloads JSON enormes.
+            if (item.type === 'PROJECT') {
+              // 1. Main project image
+              if (payload.image || payload.fileData) {
+                const source = payload.fileData || payload.image;
+                if (source && (source instanceof ArrayBuffer || (typeof source === 'string' && (source.startsWith('data:') || source.startsWith('blob:'))))) {
+                  payload.image = await uploadMediaSW(source, payload.filename || 'project_image.jpg', payload.mimeType, 'projects');
+                  delete payload.fileData;
+                  await persistProgress();
+                }
+              }
+              // 2. All attached files (ProjectFile[]) — one by one to Bunny CDN
+              if (payload.files && Array.isArray(payload.files)) {
+                for (const f of payload.files) {
+                  const source = f.fileData || f.url;
+                  if (source && (source instanceof ArrayBuffer || (typeof source === 'string' && (source.startsWith('data:') || source.startsWith('blob:'))))) {
+                    f.url = await uploadMediaSW(source, f.filename || f.name || 'project_file.jpg', f.mimeType, 'projects');
+                    delete f.fileData;
+                    await persistProgress();
+                  }
+                }
               }
             }
 
@@ -2060,6 +2025,26 @@ const uploadInChunksSW = async (blob, filename, subfolder = 'uploads') => {
           };
 
           const finalPayload = await processMedia(item);
+
+          // v340: SAFETY CHECK — Re-read item from DB to verify it still exists.
+          // The page-side syncOutbox (GlobalSyncWorker.tsx) may have already processed
+          // and deleted this item while we were uploading media. Without this check,
+          // we'd send a DUPLICATE API request with a different syncId structure.
+          try {
+            const recheckTx = db.transaction(['outbox'], 'readonly');
+            const recheckStore = recheckTx.objectStore('outbox');
+            const recheckGet = recheckStore.get(item.id);
+            const recheckItem = await new Promise(r => {
+              recheckGet.onsuccess = () => r(recheckGet.result);
+              recheckGet.onerror = () => r(null);
+            });
+            if (!recheckItem) {
+              console.log(`[SW v340] Item ${item.id} (${item.type}) already deleted by page sync — skipping`);
+              continue;
+            }
+          } catch(e) {
+            console.warn('[SW v340] Re-check failed, continuing anyway:', e);
+          }
 
           // v260: Clean client-only fields from TASK payloads before sending
           if (item.type === 'TASK') {

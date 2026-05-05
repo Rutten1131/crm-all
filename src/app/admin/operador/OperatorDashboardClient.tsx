@@ -306,6 +306,12 @@ export default function OperatorDashboardClient({
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
 
+  // v352: Pending offline outbox PROJECT entries (creados sin conexión)
+  const pendingProjects = useLiveQuery(
+    () => db.outbox.where('type').equals('PROJECT').toArray(),
+    []
+  ) || []
+
   // Merge server projects with cache projects (Smart Merge v317)
   const projects = useMemo(() => {
     const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
@@ -332,11 +338,25 @@ export default function OperatorDashboardClient({
     const projectMap = new Map();
     sourceProjects.forEach((p: any) => projectMap.set(p.id, p));
 
-    return Array.from(projectMap.values())
-      .map(p => ({
-        ...p,
-        unreadCount: unreadCounts?.[p.id] ?? p.unreadCount ?? 0
-      }))
+    // v352: Include pending outbox PROJECT entries (creados offline, aún no sincronizados)
+    const pendingMapped = pendingProjects.map(p => ({
+      ...p.payload,
+      id: `pending-${p.id}`,
+      isPending: true,
+      createdAt: new Date(p.timestamp).toISOString(),
+      status: p.payload.status || 'LEAD',
+      unreadCount: 0
+    }));
+
+    return [
+      ...pendingMapped,
+      ...Array.from(projectMap.values())
+        .filter(p => !pendingMapped.some(pp => pp.title === p.title))
+        .map(p => ({
+          ...p,
+          unreadCount: unreadCounts?.[p.id] ?? p.unreadCount ?? 0
+        }))
+    ]
       .filter(p => {
         const matchesSearch = !searchTerm || 
           p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -346,9 +366,9 @@ export default function OperatorDashboardClient({
         return matchesSearch;
       })
       .sort((a, b) => 
-        new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime()
+        new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime()
       );
-  }, [projectsFromCache, emergencyProjects, initialProjects, unreadCounts, searchTerm, isHydratingAuth])
+  }, [projectsFromCache, emergencyProjects, initialProjects, pendingProjects, unreadCounts, searchTerm, isHydratingAuth])
 
   const paginatedProjects = useMemo(() => {
     if (!projects) return undefined;
@@ -867,14 +887,15 @@ export default function OperatorDashboardClient({
                   const completedPhases = (project.phases || []).filter((p: any) => p.status === 'COMPLETADA').length
                   const totalPhases = (project.phases || []).length
                   const progress = totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0
+                  const isPending = project.isPending === true
                   
                   return (
                     <Link 
-                      href={`/admin/operador/proyecto/${project.id}`} 
+                      href={isPending ? '#' : `/admin/operador/proyecto/${project.id}`} 
                       key={project.id} 
                       prefetch={false}
                       onClick={(e) => {
-                        if (!project.id) return;
+                        if (!project.id || isPending) return;
                         // v289: Store ID in sessionStorage as emergency fallback for offline-shell
                         sessionStorage.setItem('last_op_project_id', String(project.id));
                         console.log('[OpNav] Navigating to project:', project.id);
@@ -886,12 +907,19 @@ export default function OperatorDashboardClient({
                         }
                       }}
                       className="card interactive" 
-                      style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column' }}
+                      style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', opacity: isPending ? 0.8 : 1, cursor: isPending ? 'default' : 'pointer' }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                        <span className={`status-badge status-${project.status.toLowerCase()}`}>
-                          {project.status}
-                        </span>
+                        {isPending ? (
+                          <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.9)', color: 'white', padding: '4px 10px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            PENDIENTE DE SINCRONIZACIÓN
+                          </span>
+                        ) : (
+                          <span className={`status-badge status-${project.status.toLowerCase()}`}>
+                            {project.status}
+                          </span>
+                        )}
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{(project.phases || []).length} fases</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>

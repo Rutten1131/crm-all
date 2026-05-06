@@ -711,80 +711,90 @@ export default function GlobalSyncWorker() {
           // 2. Handle multiple media (TASK / CALENDAR)
           if (item.type === 'TASK' && (finalPayload.attachments || finalPayload.attachmentLinks || finalPayload.files)) {
             try {
-              // v357: Deduplicate source attachments more robustly.
-              // Often 'files' and 'attachments' contain the same data during offline creation.
-              const rawAttachments = [
+              // v360: Robust deduplication — prioritize binary sources (fileData) > base64 > url
+              const rawSources = [
                 ...(finalPayload.attachments || []), 
                 ...(finalPayload.attachmentLinks || []),
                 ...(finalPayload.files || [])
               ];
               
-              const seenIdentifiers = new Set();
-              const uniqueSources = [];
-
-              for (const att of rawAttachments) {
-                // Use a combination of name and the actual content (or URL) as a fingerprint
-                const content = att.url || att.data || att.base64 || '';
-                const fingerprint = `${att.name}_${content.substring(0, 100)}`; 
+              const sourceMap = new Map<string, any>();
+              for (const att of rawSources) {
+                if (!att.name) continue;
+                const existing = sourceMap.get(att.name);
                 
-                if (!seenIdentifiers.has(fingerprint) && content) {
-                  seenIdentifiers.add(fingerprint);
-                  uniqueSources.push(att);
+                // Score source quality
+                const getScore = (a: any) => {
+                  const src = a.fileData || a.data || a.base64 || a.url || '';
+                  if (a.fileData || (typeof src === 'object' && src.buffer)) return 3;
+                  if (typeof src === 'string' && src.startsWith('data:')) return 2;
+                  if (typeof src === 'string' && src.startsWith('blob:')) return 1;
+                  if (typeof src === 'string' && src.startsWith('http')) return 0;
+                  return -1;
+                };
+
+                if (!existing || getScore(att) > getScore(existing)) {
+                  sourceMap.set(att.name, att);
                 }
               }
 
+              const uniqueSources = Array.from(sourceMap.values());
               const uploadedFiles = [];
+
               for (const att of uniqueSources) {
-                const sourceData = att.base64 || att.url || att.data;
+                const sourceData = att.fileData || att.data || att.base64 || att.url;
+                if (!sourceData) continue;
+
+                let finalUrl = '';
+                const isBinary = (sourceData instanceof ArrayBuffer || sourceData instanceof Uint8Array || (typeof sourceData === 'object' && sourceData.buffer));
                 const isBase64 = typeof sourceData === 'string' && sourceData.startsWith('data:');
                 const isBlobUrl = typeof sourceData === 'string' && sourceData.startsWith('blob:');
                 const isRawFile = sourceData instanceof Blob;
 
-                let finalUrl = '';
-
-                if (isBase64 || isBlobUrl || isRawFile) {
+                if (isBinary || isBase64 || isBlobUrl || isRawFile) {
                   let blob: Blob;
                   if (isRawFile) {
                     blob = sourceData;
+                  } else if (isBinary) {
+                    const buffer = (sourceData as any).buffer || sourceData;
+                    blob = new Blob([buffer], { type: att.type || 'application/octet-stream' });
                   } else {
-                    const res = await fetch(sourceData);
+                    const res = await fetch(sourceData as string);
                     blob = await res.blob();
                   }
+                  
                   const uploadResult = await uploadToBunnyClientSide(blob, att.name, 'appointments');
                   finalUrl = uploadResult.url;
-                  await new Promise(resolve => setTimeout(resolve, 100));
+                  // Memory release
+                  if (att.fileData) att.fileData = null;
+                  await new Promise(resolve => setTimeout(resolve, 50));
                 } else if (typeof sourceData === 'string' && sourceData.startsWith('http')) {
-                  // Already uploaded or existing link
                   finalUrl = sourceData;
                 }
 
                 if (finalUrl) {
-                  uploadedFiles.push({ url: finalUrl, type: att.type, name: att.name });
-                  
-                  // v358: Update ALL references in the original payload that share this source
-                  const updatePayloadArray = (arr: any[]) => {
-                    if (!arr) return;
-                    for (let item of arr) {
-                      const itemSrc = item.base64 || item.url || item.data;
-                      if (itemSrc === sourceData) {
-                        item.url = finalUrl;
-                        if (item.data !== undefined) item.data = finalUrl;
-                        delete item.base64;
-                      }
-                    }
-                  }
-                  updatePayloadArray(finalPayload.attachments);
-                  updatePayloadArray(finalPayload.attachmentLinks);
-                  updatePayloadArray(finalPayload.files);
+                  uploadedFiles.push({ 
+                    url: finalUrl, 
+                    type: att.type || (att.name.match(/\.(mp4|mov|webm)$/i) ? 'video' : 'image'), 
+                    name: att.name 
+                  });
                 }
               }
 
-              // v358: Re-standardize payload from the deduplicated uploadedFiles
+              // v360: Re-standardize payload with NO OVERLAPS
+              // 'files' is the source of truth for the DB
+              // 'attachments' (images/docs) and 'attachmentLinks' (videos) are for WA and legacy UI
               finalPayload.files = uploadedFiles;
-              finalPayload.attachments = uploadedFiles.filter(f => f.type !== 'video').map(f => ({ data: f.url, type: f.type, name: f.name }));
-              finalPayload.attachmentLinks = uploadedFiles.filter(f => f.type === 'video').map(f => ({ url: f.url, type: f.type, name: f.name }));
+              finalPayload.attachments = uploadedFiles
+                .filter(f => f.type !== 'video' && f.type !== 'audio')
+                .map(f => ({ data: f.url, type: f.type, name: f.name }));
+              
+              finalPayload.attachmentLinks = uploadedFiles
+                .filter(f => f.type === 'video' || f.type === 'audio')
+                .map(f => ({ url: f.url, type: f.type, name: f.name }));
+
             } catch (err) {
-              // console.error('Failed task attachments sync:', err);
+              console.error('[Sync] Failed TASK media sync:', err);
               await db.outbox.update(item.id!, { status: 'pending' });
               continue;
             }

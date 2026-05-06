@@ -462,8 +462,8 @@ export default function ProjectChatUnified({
                    </div>
                  )}
                  
-                 {/* Text Content */}
-                    {msg.content && (msg.type === 'TEXT' || msg.type === 'MESSAGE' || msg.type === 'DOCUMENT' || msg.type === 'FILE' || !msg.type) && (
+                 {/* v360: Unified Text & Quote Rendering */}
+                    {msg.content && !isExpense && (
                       msg.content.includes('COTIZACIÓN COMPARTIDA') ? (
                         <div className="quote-bubble" style={{ 
                           backgroundColor: 'rgba(59, 130, 246, 0.05)', 
@@ -499,7 +499,15 @@ export default function ProjectChatUnified({
                           </p>
                         </div>
                       ) : (
-                        <p>{msg.content}</p>
+                        <div className="message-text" style={{ 
+                          fontSize: '0.95rem', 
+                          lineHeight: '1.5', 
+                          whiteSpace: 'pre-wrap', 
+                          wordBreak: 'break-word',
+                          marginBottom: (mediaArray.length > 0 || msg.type === 'LOCATION' || msg.type === 'IMAGE' || msg.type === 'VIDEO' || msg.type === 'AUDIO') ? '8px' : '0'
+                        }}>
+                          {msg.content}
+                        </div>
                       )
                     )}
 

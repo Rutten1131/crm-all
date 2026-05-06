@@ -624,7 +624,27 @@ export default function OperatorDashboardClient({
       project: (projects || []).find((p: any) => p.id === Number(t.payload.projectId)) || null,
       isOffline: true // flag for UI
     }))
-    return [...merged, ...pendingMapped].sort((a, b) => {
+    // v360: Deduplicate pending tasks that have already been synced
+    const finalResult: any[] = [...merged];
+    const seenMap = new Set();
+    
+    // Add real appointments to seenMap
+    finalResult.forEach(ra => {
+      const timeStr = new Date(ra.startTime).toISOString().slice(0, 16); // Minute precision
+      seenMap.add(`${ra.title}_${ra.projectId}_${timeStr}`);
+    });
+
+    pendingMapped.forEach(pt => {
+      const timeStr = new Date(pt.startTime).toISOString().slice(0, 16);
+      const key = `${pt.title}_${pt.projectId}_${timeStr}`;
+      
+      if (!seenMap.has(key)) {
+        finalResult.push(pt);
+        seenMap.add(key);
+      }
+    });
+
+    return finalResult.sort((a, b) => {
       const tA = new Date(a.startTime).getTime()
       const tB = new Date(b.startTime).getTime()
       if (isNaN(tA) && isNaN(tB)) return 0;

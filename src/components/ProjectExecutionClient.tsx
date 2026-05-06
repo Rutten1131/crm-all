@@ -259,7 +259,22 @@ export default function ProjectExecutionClient({
           rm.type === msg.type && 
           Math.abs(new Date(rm.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 30000
         );
-        if (!isDuplicate && !seenIds.has(msg.id)) {
+
+        if (isDuplicate) {
+          // v360: Si el nuevo es "real" (numérico) y el existente es "temp", reemplazarlo
+          const existingIdx = result.findIndex(rm => 
+            rm.content === msg.content && 
+            rm.type === msg.type && 
+            Math.abs(new Date(rm.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 30000
+          );
+          
+          if (existingIdx !== -1 && typeof msg.id === 'number' && typeof result[existingIdx].id === 'string' && result[existingIdx].id.startsWith('temp-')) {
+            result[existingIdx] = msg;
+          }
+          continue;
+        }
+
+        if (!seenIds.has(msg.id)) {
           seenIds.add(msg.id);
           result.push(msg);
         }

@@ -122,29 +122,21 @@ export default function OperatorDashboardClient({
   // Use Dexie as live source for projects to support offline correctly
   const projectsFromCache = useLiveQuery(
     async () => {
-      // v292: Try user prop first (available immediately), fallback to localUser
       const isOffline = typeof navigator !== 'undefined' && !navigator.onLine
 
-      // v317: En offline, confiar plenamente en lo que hay en cache (ya filtrado por el server).
-      if (isOffline) {
-        const allProjects = await db.projectsCache
-          .orderBy('lastAccessedAt')
-          .reverse()
-          .limit(500)
-          .toArray()
-        if (allProjects.length > 0) return allProjects
-      }
-
-      const uId = user?.id || localUser?.id
-      // v339: Si no hay uId pero estamos online, NO filtrar (el server ya lo hizo en el sync)
-      // Esto evita que los proyectos desaparezcan si la sesión se refresca momentáneamente.
+      // v359: En offline o si estamos en proceso de hidratación, confiar plenamente en la caché.
+      // La caché (db.projectsCache) YA viene filtrada por el servidor durante la sincronización.
+      // Re-filtrar por userId en el cliente es arriesgado si la sesión no se ha recuperado del todo.
       const allProjects = await db.projectsCache
         .orderBy('lastAccessedAt')
         .reverse()
         .limit(500)
         .toArray()
 
-      if (!uId) return allProjects; // Fallback: show everything we have in cache
+      if (isOffline) return allProjects
+
+      const uId = user?.id || localUser?.id
+      if (!uId) return allProjects // Fallback: show everything we have in cache
 
       const userId = Number(uId)
       if (isNaN(userId) || userId <= 0) return allProjects
@@ -153,7 +145,9 @@ export default function OperatorDashboardClient({
       const filtered = allProjects.filter(p => {
         const isInTeam = p.team?.some((m: any) => Number(m.userId) == userId)
         const isCreator = Number(p.createdBy || p.createdById) == userId
-        return isInTeam || isCreator || p.isPending
+        // v359: Incluir siempre los proyectos con ID temporal 'pending' para que no desaparezcan
+        const isPending = p.isPending || String(p.id).startsWith('pending')
+        return isInTeam || isCreator || isPending
       })
 
       return filtered
@@ -258,11 +252,23 @@ export default function OperatorDashboardClient({
     return () => clearTimeout(timer)
   }, [projectsFromCache, user?.id, localUser?.id])
 
-  // v293: Efecto adicional para persistir cuando el LiveQuery cambie (siempre mantener el snapshot fresco)
+  // v293/v359: Siempre mantener el snapshot fresco, pero NO sobrescribir con una lista vacía o incompleta
+  // si ya tenemos un snapshot más grande guardado.
   useEffect(() => {
     if (projectsFromCache && projectsFromCache.length > 0) {
-      // v316: Persistir en localStorage para sobrevivir al cierre de app
-      try { localStorage.setItem('last_op_projects_snapshot', JSON.stringify(projectsFromCache)) } catch(e) {}
+      try {
+        const currentSaved = localStorage.getItem('last_op_projects_snapshot');
+        if (currentSaved) {
+          const parsed = JSON.parse(currentSaved);
+          // v359: Solo sobrescribir si la nueva lista es igual o más grande, o si la actual es muy vieja.
+          // Esto evita que al crear 1 proyecto nuevo (offline) borremos los 18 existentes del snapshot.
+          if (Array.isArray(parsed) && parsed.length > projectsFromCache.length) {
+            // console.log('[Snapshot] Skipping overwrite: current snapshot is larger than live list.');
+            return;
+          }
+        }
+        localStorage.setItem('last_op_projects_snapshot', JSON.stringify(projectsFromCache));
+      } catch (e) {}
     }
   }, [projectsFromCache])
 
@@ -1027,11 +1033,8 @@ export default function OperatorDashboardClient({
                         sessionStorage.setItem('last_op_project_id', String(project.id));
                         console.log('[OpNav] Navigating to project:', project.id);
                         
-                        // v289: If offline, force full-page navigation to keep the URL correct for the shell
-                        if (typeof navigator !== 'undefined' && !navigator.onLine) {
-                          e.preventDefault();
-                          window.location.href = `/admin/operador/proyecto/${project.id}`;
-                        }
+                        // v359: Removed window.location.href forced reload.
+                        // Now we rely on RSC pre-caching for a smooth soft-navigation offline.
                       }}
                       className="card interactive" 
                       style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', opacity: isPending ? 0.8 : 1, cursor: isPending ? 'default' : 'pointer', position: 'relative' }}

@@ -17,9 +17,18 @@ export default function OfflinePrefetcher({ urls }: { urls: string[] }) {
     // We explicitly AVOID router.prefetch here because calling it 30 times exhausts the Prisma DB Pool!
     const dataTimer = setTimeout(() => {
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        // v359: Cache BOTH HTML and RSC payloads for each URL
+        // This ensures Link navigation works (RSC) and hard refresh works (HTML)
         navigator.serviceWorker.controller.postMessage({
           type: 'PRECACHE_URLS',
-          urls
+          urls: urls
+        })
+
+        // v359: Specifically request RSC versions of the pages for instant navigation
+        navigator.serviceWorker.controller.postMessage({
+          type: 'PRECACHE_URLS',
+          urls: urls.map(u => u.includes('?') ? `${u}&_rsc=pre` : `${u}?_rsc=pre`),
+          options: { isRsc: true }
         })
       }
     }, 12000)

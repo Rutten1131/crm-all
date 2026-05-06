@@ -740,6 +740,8 @@ export default function GlobalSyncWorker() {
                 const isBlobUrl = typeof sourceData === 'string' && sourceData.startsWith('blob:');
                 const isRawFile = sourceData instanceof Blob;
 
+                let finalUrl = '';
+
                 if (isBase64 || isBlobUrl || isRawFile) {
                   let blob: Blob;
                   if (isRawFile) {
@@ -749,15 +751,35 @@ export default function GlobalSyncWorker() {
                     blob = await res.blob();
                   }
                   const uploadResult = await uploadToBunnyClientSide(blob, att.name, 'appointments');
-                  uploadedFiles.push({ url: uploadResult.url, type: att.type, name: att.name });
+                  finalUrl = uploadResult.url;
                   await new Promise(resolve => setTimeout(resolve, 100));
                 } else if (typeof sourceData === 'string' && sourceData.startsWith('http')) {
                   // Already uploaded or existing link
-                  uploadedFiles.push({ url: sourceData, type: att.type, name: att.name });
+                  finalUrl = sourceData;
+                }
+
+                if (finalUrl) {
+                  uploadedFiles.push({ url: finalUrl, type: att.type, name: att.name });
+                  
+                  // v358: Update ALL references in the original payload that share this source
+                  const updatePayloadArray = (arr: any[]) => {
+                    if (!arr) return;
+                    for (let item of arr) {
+                      const itemSrc = item.base64 || item.url || item.data;
+                      if (itemSrc === sourceData) {
+                        item.url = finalUrl;
+                        if (item.data !== undefined) item.data = finalUrl;
+                        delete item.base64;
+                      }
+                    }
+                  }
+                  updatePayloadArray(finalPayload.attachments);
+                  updatePayloadArray(finalPayload.attachmentLinks);
+                  updatePayloadArray(finalPayload.files);
                 }
               }
 
-              // Update the task payload with final URLs
+              // v358: Re-standardize payload from the deduplicated uploadedFiles
               finalPayload.files = uploadedFiles;
               finalPayload.attachments = uploadedFiles.filter(f => f.type !== 'video').map(f => ({ data: f.url, type: f.type, name: f.name }));
               finalPayload.attachmentLinks = uploadedFiles.filter(f => f.type === 'video').map(f => ({ url: f.url, type: f.type, name: f.name }));

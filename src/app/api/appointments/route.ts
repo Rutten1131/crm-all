@@ -200,18 +200,20 @@ export async function POST(request: Request) {
               const phoneClientText = clientPhone ? `\n📞 *Teléfono Cliente:*\n${clientPhone}` : '';
               const locOpText = operatorLocation ? `\n📡 *Ubicación Operario (GPS):*\n${operatorLocation}` : '';
               
-              // v357: Deduplicate all attachments to avoid redundant entries in the WA message
+              // v358: Aggressive deduplication for the WA manifest
               const rawAllAttachments = [...(attachments || []), ...(attachmentLinks || [])];
-              const seenAtts = new Set();
-              const allAttachments = [];
+              const uniqueMap = new Map();
               
               for (const att of rawAllAttachments) {
-                const fingerprint = `${att.name}_${att.url || att.data}`;
-                if (!seenAtts.has(fingerprint)) {
-                  seenAtts.add(fingerprint);
-                  allAttachments.push(att);
+                const url = att.url || att.data;
+                const name = att.name;
+                const key = `${name}_${url}`;
+                
+                if (url && !uniqueMap.has(key)) {
+                  uniqueMap.set(key, att);
                 }
               }
+              const allAttachments = Array.from(uniqueMap.values());
 
               const fileManifest = allAttachments.length > 0 
                 ? `\n📦 *Archivos adjuntos:* ${allAttachments.map(a => a.name).join(', ')}` 

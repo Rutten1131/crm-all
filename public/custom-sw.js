@@ -1,4 +1,4 @@
-const SW_VERSION = 'v341-throttle';
+const SW_VERSION = 'v359-rsc';
 const VERSION = SW_VERSION;
 const STATIC_CACHE = `aquatech-static-${SW_VERSION}`;
 const PAGES_CACHE  = `aquatech-pages-${SW_VERSION}`;
@@ -1179,12 +1179,12 @@ self.addEventListener('message', (event) => {
               continue;
             }
 
-            const isRsc = url.includes('_rsc=');
+            const isRsc = url.includes('_rsc=') || options.headers?.['RSC'] === '1' || options.isRsc === true;
             const response = await fetchWithTimeout(new Request(url, { 
               credentials: 'same-origin',
               headers: { 
                 'Cache-Control': 'no-cache', 
-                'Accept': isRsc ? 'text/x-component, text/html' : 'text/html',
+                'Accept': isRsc ? 'text/x-component, text/html, */*' : 'text/html',
                 ...(isRsc ? { 'RSC': '1' } : {}),
                 ...(options.headers || {})
               }
@@ -1193,10 +1193,21 @@ self.addEventListener('message', (event) => {
             if (response.ok) {
               const contentType = response.headers.get('Content-Type') || '';
               const isHTML = contentType.includes('text/html');
+              const isRscResponse = contentType.includes('text/x-component') || isRsc;
               const finalUrl = response.url || '';
               const isLoginRedirect = finalUrl.includes('/login');
               
-              // v305: Strict validation. Pages MUST be HTML. RSC payloads go to RSC_CACHE if needed.
+              // v359: Cache HTML in PAGES_CACHE and RSC in RSC_CACHE
+              if (isRscResponse && !isLoginRedirect) {
+                const rscCache = await caches.open(RSC_CACHE);
+                // v359: Use the original URL without _rsc for the cache key to match the router's request
+                const cacheUrl = new URL(url, self.location.origin);
+                cacheUrl.searchParams.delete('_rsc');
+                await rscCache.put(cacheUrl.toString(), response.clone());
+                // Also cache with original URL just in case
+                await rscCache.put(url, response.clone());
+              }
+
               if (isHTML && !isLoginRedirect) {
                 await cache.put(url, response.clone());
                 const alt = url.endsWith('/') ? url.slice(0, -1) : url + '/';
@@ -2046,13 +2057,25 @@ const uploadInChunksSW = async (blob, filename, subfolder = 'uploads', mimeType 
             // 4. Handle TASK (Attachments & Links)
             if (item.type === 'TASK') {
               const uploadedMap = {};
-              // v357: Unify attachments and files to avoid double-processing/uploading
-              const allMedia = [
+              // v358: Deduplicate allMedia by content/name to avoid double-uploading same file
+              const uniqueMediaSources = [];
+              const seenMedia = new Set();
+              
+              const rawMedia = [
                 ...(payload.attachments || []),
                 ...(payload.files || [])
               ];
+
+              for (let m of rawMedia) {
+                const src = m.fileData || m.base64 || m.data || m.url;
+                const finger = `${m.name}_${typeof src === 'string' ? src.substring(0, 100) : 'binary'}`;
+                if (!seenMedia.has(finger) && src) {
+                  seenMedia.add(finger);
+                  uniqueMediaSources.push(m);
+                }
+              }
               
-              for (let media of allMedia) {
+              for (let media of uniqueMediaSources) {
                 const source = media.fileData || media.base64 || media.data || media.url;
                 if (source && (source instanceof ArrayBuffer || (typeof source === 'string' && (source.startsWith('data:') || source.startsWith('blob:'))))) {
                   const cacheKey = typeof source === 'string' ? (source.length > 100 ? source.substring(0, 100) : source) : source;
@@ -2061,11 +2084,24 @@ const uploadInChunksSW = async (blob, filename, subfolder = 'uploads', mimeType 
                     uploadedMap[cacheKey] = await uploadMediaSW(source, media.name, media.mimeType, 'appointments');
                   }
                   
-                  // Update all references in place
-                  media.url = uploadedMap[cacheKey];
-                  if (media.data !== undefined) media.data = media.url;
-                  delete media.fileData;
-                  delete media.base64;
+                  const finalUrl = uploadedMap[cacheKey];
+
+                  // v358: Update ALL occurrences of this source in both arrays to the same final URL
+                  const updateAll = (arr) => {
+                    if (!arr) return;
+                    for (let item of arr) {
+                      const itemSrc = item.fileData || item.base64 || item.data || item.url;
+                      if (itemSrc === source) {
+                        item.url = finalUrl;
+                        if (item.data !== undefined) item.data = finalUrl;
+                        delete item.fileData;
+                        delete item.base64;
+                      }
+                    }
+                  };
+                  
+                  updateAll(payload.attachments);
+                  updateAll(payload.files);
                   await persistProgress();
                 }
               }

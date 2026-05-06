@@ -418,6 +418,28 @@ export default function OperatorDashboardClient({
         }
         await db.projectsCache.delete(projectToDelete.id);
       }
+
+      // v355: CRITICAL - Clean snapshots to prevent "ghost projects"
+      // Remove from emergency list immediately
+      setEmergencyProjects(prev => prev ? prev.filter(p => p.id !== projectToDelete.id) : []);
+      
+      // Update localStorage snapshot
+      try {
+        const saved = localStorage.getItem('last_op_projects_snapshot');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            const filtered = parsed.filter(p => {
+              // Handle both normal and pending IDs
+              const pId = p.isPending ? `pending-${p.id}` : p.id;
+              const delId = projectToDelete.isPending ? projectToDelete.id : projectToDelete.id;
+              return pId !== delId && p.id !== projectToDelete.id;
+            });
+            localStorage.setItem('last_op_projects_snapshot', JSON.stringify(filtered));
+          }
+        }
+      } catch (e) {}
+
     } catch (err) {
       console.error('[OpDashboard] Delete failed:', err);
       alert('Error de conexión al eliminar');

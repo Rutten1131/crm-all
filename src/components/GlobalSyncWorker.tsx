@@ -679,26 +679,28 @@ export default function GlobalSyncWorker() {
               const folder = item.projectId ? `projects/${item.projectId}` : 'general';
               const uploadResult = await uploadToBunnyClientSide(uploadFile, finalFilename, folder);
               
-              if (finalPayload.media) {
+              if (item.type === 'EXPENSE') {
+                finalPayload.receiptPhoto = uploadResult.url;
+                if (finalPayload.receiptFileData) finalPayload.receiptFileData = null; 
+              } else if (item.type === 'GALLERY_UPLOAD') {
+                finalPayload.url = uploadResult.url;
+                if (finalPayload.fileData) finalPayload.fileData = null; 
+              } else {
                 finalPayload.media = { 
                   ...finalPayload.media,
                   url: uploadResult.url, 
                   filename: finalFilename, 
                   mimeType: uploadResult.mimeType,
-                  type: uploadResult.type // Use the detected type (IMAGE, VIDEO, AUDIO)
+                  type: uploadResult.type,
+                  base64: undefined,
+                  fileData: null // v355: Memory release
                 };
               }
-              if (item.type === 'GALLERY_UPLOAD') finalPayload.url = uploadResult.url;
-              if (finalPayload.receiptPhoto) finalPayload.receiptPhoto = uploadResult.url;
+              
+              // v355: Allow GC to kick in
+              await new Promise(resolve => setTimeout(resolve, 100));
 
               delete finalPayload.file;
-              delete finalPayload.fileData;
-              delete finalPayload.receiptFileData;
-              delete finalPayload.previewBase64;
-              if (finalPayload.media) {
-                delete finalPayload.media.base64;
-                delete finalPayload.media.fileData;
-              }
             } catch (err) {
               // console.error('Failed single media upload:', err);
               await db.outbox.update(item.id!, { status: 'pending' });
@@ -737,6 +739,7 @@ export default function GlobalSyncWorker() {
                   }
                   const uploadResult = await uploadToBunnyClientSide(blob, att.name, 'appointments');
                   uploadedFiles.push({ url: uploadResult.url, type: att.type, name: att.name });
+                  await new Promise(resolve => setTimeout(resolve, 100));
                 } else if (typeof sourceData === 'string' && sourceData.startsWith('http')) {
                   // Already uploaded or existing link
                   uploadedFiles.push({ url: sourceData, type: att.type, name: att.name });
@@ -776,9 +779,10 @@ export default function GlobalSyncWorker() {
                  const processedFiles = [];
                  for (const f of finalPayload.files) {
                    if (f.fileData && f.fileData.buffer) {
-                     // File has binary data stored from offline — upload to Bunny
+                     // v355: File has binary data stored from offline — upload to Bunny
                      const blob = new Blob([f.fileData.buffer], { type: f.fileData.type || f.mimeType || 'application/octet-stream' });
                      const uploadResult = await uploadToBunnyClientSide(blob, f.fileData.name || f.filename, 'projects');
+                     
                      processedFiles.push({
                        url: uploadResult.url,
                        filename: f.filename || f.fileData.name,
@@ -787,6 +791,15 @@ export default function GlobalSyncWorker() {
                        category: f.category,
                        size: f.size
                      });
+
+                     // v355: CRITICAL MEMORY RELEASE
+                     // Clear the buffer from memory immediately after upload
+                     // This prevents OOM crashes when syncing multiple large videos (e.g. 600MB total)
+                     f.fileData.buffer = null;
+                     f.fileData = null;
+                     
+                     // Small delay to let the browser Garbage Collector work
+                     await new Promise(resolve => setTimeout(resolve, 150));
                    } else if (f.url && f.url.startsWith('data:')) {
                      // Small file with base64 — let the API handle it
                      processedFiles.push({ url: f.url, filename: f.filename, mimeType: f.mimeType, type: f.type, category: f.category, size: f.size });

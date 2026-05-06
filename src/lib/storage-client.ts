@@ -101,33 +101,56 @@ export async function uploadInChunks(
   filename: string,
   mimeType?: string
 ): Promise<{ url: string }> {
-  // v278: Increased chunk size to 4MB for better performance on modern networks
-  const CHUNK_SIZE = 4 * 1024 * 1024; 
+  // v355: Increased chunk size to 10MB for significantly faster uploads on 4G/5G
+  const CHUNK_SIZE = 10 * 1024 * 1024; 
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
   const uploadId = crypto.randomUUID();
 
+  console.log(`[Storage] Starting chunked upload for ${filename} (${(file.size/1024/1024).toFixed(1)}MB). Total chunks: ${totalChunks}`);
+
   for (let i = 0; i < totalChunks; i++) {
     const chunk = file.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-    const formData = new FormData();
-    formData.append('chunk', chunk);
-    formData.append('uploadId', uploadId);
-    formData.append('chunkIndex', i.toString());
-    formData.append('totalChunks', totalChunks.toString());
-    formData.append('filename', filename);
-    formData.append('mimeType', mimeType || file.type || 'application/octet-stream');
+    
+    // v355: Retry logic for each chunk (up to 3 times)
+    let success = false;
+    let attempts = 0;
+    let lastData: any = null;
 
-    const res = await fetch('/api/upload/chunk', {
-      method: 'POST',
-      body: formData
-    });
+    while (!success && attempts < 3) {
+      attempts++;
+      try {
+        const formData = new FormData();
+        formData.append('chunk', chunk);
+        formData.append('uploadId', uploadId);
+        formData.append('chunkIndex', i.toString());
+        formData.append('totalChunks', totalChunks.toString());
+        formData.append('filename', filename);
+        formData.append('mimeType', mimeType || file.type || 'application/octet-stream');
 
-    if (!res.ok) {
-      throw new Error(`Chunk ${i} failed with status ${res.status}`);
-    }
+        const res = await fetch('/api/upload/chunk', {
+          method: 'POST',
+          body: formData,
+          priority: 'high' // v355: Priority for network
+        });
 
-    const data = await res.json();
-    if (data.url) {
-      return { url: data.url };
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+
+        const data = await res.json();
+        lastData = data;
+        success = true;
+        
+        console.log(`[Storage] Chunk ${i + 1}/${totalChunks} uploaded successfully.`);
+        
+        if (data.url) {
+          console.log(`[Storage] Upload complete! URL: ${data.url}`);
+          return { url: data.url };
+        }
+      } catch (err) {
+        console.warn(`[Storage] Chunk ${i} attempt ${attempts} failed:`, err);
+        if (attempts >= 3) throw new Error(`Chunk ${i} failed after 3 attempts`);
+        // Wait 1s before retry
+        await new Promise(r => setTimeout(r, 1000));
+      }
     }
   }
 

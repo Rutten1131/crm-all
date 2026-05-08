@@ -8,13 +8,21 @@ const ALL_LOGO_B64 = ''; // Base64 for ALL logo would go here
 
 // Adds the professional ALL header to any jsPDF instance
 export function addAllHeader(doc: jsPDF, title: string, subtitle: string) {
-  // 1. Branding Text (since we don't have the b64 for ALL yet, we use text)
-  doc.setTextColor(ALL_BLUE[0], ALL_BLUE[1], ALL_BLUE[2]);
+  // 1. Branding Logo (Vector-style)
+  doc.setFillColor(ALL_BLUE[0], ALL_BLUE[1], ALL_BLUE[2]);
+  doc.roundedRect(15, 12, 18, 18, 4, 4, 'F');
+  doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(28);
-  doc.text('ALL', 15, 25);
   doc.setFontSize(10);
-  doc.text('CRM & MANAGEMENT', 15, 32);
+  doc.text('ALL', 24, 23, { align: 'center' });
+
+  // Branding Text
+  doc.setTextColor(ALL_BLUE[0], ALL_BLUE[1], ALL_BLUE[2]);
+  doc.setFontSize(18);
+  doc.text('ALL CRM', 38, 22);
+  doc.setFontSize(8);
+  doc.setTextColor(100);
+  doc.text('MANAGEMENT SYSTEM', 38, 27);
 
   // 2. Fiscal Info (Top Right Rounded Box)
   doc.setDrawColor(0);
@@ -26,7 +34,7 @@ export function addAllHeader(doc: jsPDF, title: string, subtitle: string) {
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.text('RUC:', 102, 16);
-  doc.text('1105048852001', 132, 16);
+  doc.text('S/RUC', 132, 16);
   
   // -- Line 2: COTIZACION Nº --
   doc.text('COTIZACION Nº:', 102, 21);
@@ -37,18 +45,18 @@ export function addAllHeader(doc: jsPDF, title: string, subtitle: string) {
   doc.setTextColor(0);
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
-  doc.text('CASTILLO CASTILLO PABLO JOSE', 147.5, 26, { align: 'center' });
+  doc.text('ALL CRM & MANAGEMENT', 147.5, 26, { align: 'center' });
   
   // -- Line 4: Address (Centered/Normal) --
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('18 DE NOVIEMBRE ENTRE CELICA Y GONZANAMA', 147.5, 30.5, { align: 'center' });
+  doc.text('CIUDAD DE LOJA - ECUADOR', 147.5, 30.5, { align: 'center' });
 
   // -- Line 5: Teléfono --
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.text('Teléfono:', 102, 36);
-  doc.text('0992873735', 125, 36);
+  doc.text('+593 96 341 0409', 125, 36);
 
   // -- Line 6: correo --
   doc.text('correo:', 102, 41);
@@ -189,7 +197,7 @@ export function generateProfessionalPDF(
   addAllHeader(
     doc, 
     `${config.docType} Nº: ${config.docId}`, 
-    'CASTILLO CASTILLO PABLO JOSE'
+    'ALL CRM & MANAGEMENT'
   );
 
   // --- 2. CLIENT DATA BLOCK (Rounded Box) ---
@@ -272,7 +280,7 @@ export function generateProfessionalPDF(
         addAllHeader(
           doc, 
           `${config.docType} Nº: ${config.docId}`, 
-          'CASTILLO CASTILLO PABLO JOSE'
+          'ALL CRM & MANAGEMENT'
         );
       }
     }
@@ -288,7 +296,7 @@ export function generateProfessionalPDF(
     addAllHeader(
       doc, 
       `${config.docType} Nº: ${config.docId}`, 
-      'CASTILLO CASTILLO PABLO JOSE'
+      'ALL CRM & MANAGEMENT'
     );
     finalY = 65; // Empieza después del logo en la nueva hoja
   }
@@ -351,7 +359,7 @@ export function generateProfessionalPDF(
   // Verificación final para firmas (por si notas son excepcionalmente largas)
   if (sigY + 20 > pageHeight - 10) {
     doc.addPage();
-    addAllHeader(doc, `${config.docType} Nº: ${config.docId}`, 'CASTILLO CASTILLO PABLO JOSE');
+    addAllHeader(doc, `${config.docType} Nº: ${config.docId}`, 'ALL CRM & MANAGEMENT');
     sigY = 65;
   }
   
@@ -371,7 +379,7 @@ export function generateProfessionalPDF(
     
     if (optY + 60 > pageHeight - 10) {
       doc.addPage();
-      addAllHeader(doc, `${config.docType} Nº: ${config.docId}`, 'CASTILLO CASTILLO PABLO JOSE');
+      addAllHeader(doc, `${config.docType} Nº: ${config.docId}`, 'ALL CRM & MANAGEMENT');
       optY = 65;
     }
 

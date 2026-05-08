@@ -220,7 +220,7 @@ export default function QuoteDetailClient({ quote, projects = [] }: any) {
               <div style={{ textAlign: 'right', border: '1px solid #ddd', padding: '15px', borderRadius: '4px' }}>
                 <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>R.U.C.: 1105048852001</div>
                 <div style={{ color: 'var(--primary)', fontWeight: 'bold' }}>COTIZACIÓN # {String(currentQuote.id ?? '').padStart(5, '0')}</div>
-                <div style={{ fontSize: '0.8rem' }}>CASTILLO CASTILLO PABLO JOSE</div>
+                <div style={{ fontSize: '0.8rem' }}>ALL CRM & MANAGEMENT</div>
               </div>
             </div>
 

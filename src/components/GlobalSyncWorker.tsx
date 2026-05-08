@@ -450,6 +450,31 @@ export default function GlobalSyncWorker() {
       } catch (gcErr) {
         console.warn('Error en la barredora de caché:', gcErr);
       }
+
+      // 6. ORPHAN CLEANUP — Remove from local cache any project that no longer
+      // exists on the server (e.g. deleted by an admin).
+      // Only runs when the server returned a valid, non-empty list so we never
+      // accidentally wipe the cache due to a failed fetch.
+      if (projectsToProcess.length > 0) {
+        try {
+          const serverIds = new Set(projectsToProcess.map((p: any) => p.id));
+          const allCached = await db.projectsCache.toArray();
+          const orphanIds = allCached
+            .filter(p => !serverIds.has(p.id))
+            .map(p => p.id);
+          if (orphanIds.length > 0) {
+            await db.projectsCache.bulkDelete(orphanIds);
+            await db.chatCache.bulkDelete(orphanIds);
+            await logSync(
+              'info',
+              `Orphan cleanup: ${orphanIds.length} proyectos borrados de caché local (ya no existen en servidor)`,
+              'bulk-sync'
+            );
+          }
+        } catch (orphanErr) {
+          console.warn('[Sync] Orphan cleanup falló (no crítico):', orphanErr);
+        }
+      }
     } catch (err) {
       console.error('Skeleton sync error:', err)
       await logSync('error', `Fallo sincronización masiva: ${err instanceof Error ? err.message : 'Desconocido'}`, 'bulk-sync');

@@ -217,6 +217,8 @@ export default function ProjectExecutionClient({
     const checkSize = () => setIsSmallScreen(window.innerWidth < 768)
     checkSize()
     window.addEventListener('resize', checkSize)
+    
+    let syncSuccessTimer: NodeJS.Timeout | null = null;
 
     const updateOnlineStatus = () => {
       const online = navigator.onLine

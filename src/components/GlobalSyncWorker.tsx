@@ -518,13 +518,13 @@ export default function GlobalSyncWorker() {
   const syncOutbox = async () => {
     if (typeof window === 'undefined' || !navigator.onLine || outboxLock.current || outboxSyncingRef.current) return
     
+    // v374: Visibility-based throttling. PWA standard:
+    // If hidden, wait longer between items to save battery and main-thread CPU.
+    const isHidden = typeof document !== 'undefined' && document.visibilityState === 'hidden';
+    const pacingDelay = isHidden ? 3000 : 1000;
+
     outboxSyncingRef.current = true;
     try {
-      // v374: Visibility-based throttling. PWA standard:
-      // If hidden, wait longer between items to save battery and main-thread CPU.
-      const isHidden = document.visibilityState === 'hidden';
-      const pacingDelay = isHidden ? 3000 : 1000;
-
       // v365: Reset stuck 'syncing' items — only if they have lastAttemptAt (were actually claimed)
       // Increased to 120s to allow large media uploads to complete
       const stuckItems = await db.outbox.where('status').equals('syncing').toArray();

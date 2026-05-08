@@ -1,4 +1,4 @@
-# Arquitectura de Sincronización Aquatech PWA (v2.0)
+# Arquitectura de Sincronización Orbi PWA (v2.0)
 
 Este documento describe la arquitectura de sincronización de "Grado Industrial" implementada para garantizar que el CRM funcione perfectamente en condiciones de baja conectividad.
 
@@ -37,7 +37,7 @@ Este documento describe la arquitectura de sincronización de "Grado Industrial"
 1.  **Captura**: El usuario realiza una acción (foto, mensaje, tarea).
 2.  **Persistence**: Se guarda inmediatamente en **IndexedDB (Dexie)** con estado `pending`.
 3.  **Trigger**: La app llama a `triggerBackgroundSync()`.
-4.  **Lock**: El Service Worker intenta adquirir `aquatech_outbox_lock`.
+4.  **Lock**: El Service Worker intenta adquirir `orbi_outbox_lock`.
 5.  **Process**:
     *   Si es pesado (>1MB): Inicia `BackgroundFetch`.
     *   Si es ligero: Envío directo con reintentos y backoff.

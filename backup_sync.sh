@@ -1,9 +1,9 @@
 #!/bin/bash
-# Aquatech CRM - Backup Automático cada 6 horas
+# All CRM - Backup Automático cada 6 horas
 # Guarda dump local + sincroniza al remoto (stackcp)
 
 BACKUP_DIR="/root/backups"
-LOCAL_DB="aquatech"
+LOCAL_DB="all"
 LOCAL_USER="root"
 REMOTE_HOST="mysql.gb.stackcp.com"
 REMOTE_PORT="39643"
@@ -11,7 +11,7 @@ REMOTE_USER="aquatech-prueba-3230353c94"
 REMOTE_PASS="hrf2vvbkq0"
 REMOTE_DB="aquatech-prueba-3230353c94"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-BACKUP_FILE="$BACKUP_DIR/aquatech_$TIMESTAMP.sql"
+BACKUP_FILE="$BACKUP_DIR/all_$TIMESTAMP.sql"
 LOG_FILE="$BACKUP_DIR/backup.log"
 
 mkdir -p "$BACKUP_DIR"
@@ -46,7 +46,7 @@ fi
 
 # 3. Limpiar backups viejos (más de 7 días)
 echo "[3/3] Limpiando backups viejos..." >> "$LOG_FILE"
-find "$BACKUP_DIR" -name "aquatech_*.sql" -mtime +7 -delete 2>> "$LOG_FILE"
+find "$BACKUP_DIR" -name "all_*.sql" -mtime +7 -delete 2>> "$LOG_FILE"
 echo "   OK: $(ls "$BACKUP_DIR"/*.sql 2>/dev/null | wc -l) backups guardados" >> "$LOG_FILE"
 
 echo "=== FIN $(date) ===" >> "$LOG_FILE"

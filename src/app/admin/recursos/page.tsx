@@ -55,7 +55,7 @@ export default async function RecursosPage({ searchParams }: RecursosPageProps) 
             Centro de Recursos
           </h2>
           <p className="page-subtitle" style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>
-            Acceso centralizado a documentación técnica, manuales y activos operativos de Aquatech.
+            Acceso centralizado a documentación técnica, manuales y activos operativos de Orbi.
           </p>
         </div>
       </div>

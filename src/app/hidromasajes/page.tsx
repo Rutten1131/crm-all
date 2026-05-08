@@ -15,14 +15,14 @@ const workProcess = [
   { number: "02", title: "Ingeniería", desc: "Diseño y modelado 3D de alta precisión.", icon: <Cpu size={20} />, img: "https://cesarweb.b-cdn.net/home/detalle_ingenieria.webp" },
   { number: "03", title: "Producción", desc: "Ensamblaje con tecnología certificada IBAX.", icon: <Settings size={20} />, img: "https://cesarweb.b-cdn.net/home/equipo_trabajo.webp" },
   { number: "04", title: "QA & Test", desc: "Pruebas de presión e hidromasaje rigurosas.", icon: <ShieldCheck size={20} />, img: "https://cesarweb.b-cdn.net/home/matriz_frente.webp" },
-  { number: "05", title: "Entrega", desc: "Instalación experta y garantía Aquatech.", icon: <Award size={20} />, img: "https://cesarweb.b-cdn.net/home/locales-lifestyle.webp" }
+  { number: "05", title: "Entrega", desc: "Instalación experta y garantía Orbi.", icon: <Award size={20} />, img: "https://cesarweb.b-cdn.net/home/locales-lifestyle.webp" }
 ]
 
 const iconicModels = [
-  { name: "Modelo DUO", line: "Premium Spa", href: "/hidromasajes/jacuzzis", img: "https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/model-duo.webp" },
-  { name: "Modelo MERENGUE", line: "Social Life", href: "/hidromasajes/jacuzzis", img: "https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/model-merengue.webp" },
-  { name: "Relax Elite", line: "Wellness Line", href: "/hidromasajes/jacuzzis", img: "https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/model-relax.webp" },
-  { name: "Zen Luxury", line: "Oriental Style", href: "/hidromasajes/jacuzzis", img: "https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/hero-hidromasaje.webp" },
+  { name: "Modelo DUO", line: "Premium Spa", href: "/hidromasajes/jacuzzis", img: "https://cesarweb.b-cdn.net/Hidromasaje-Orbi/model-duo.webp" },
+  { name: "Modelo MERENGUE", line: "Social Life", href: "/hidromasajes/jacuzzis", img: "https://cesarweb.b-cdn.net/Hidromasaje-Orbi/model-merengue.webp" },
+  { name: "Relax Elite", line: "Wellness Line", href: "/hidromasajes/jacuzzis", img: "https://cesarweb.b-cdn.net/Hidromasaje-Orbi/model-relax.webp" },
+  { name: "Zen Luxury", line: "Oriental Style", href: "/hidromasajes/jacuzzis", img: "https://cesarweb.b-cdn.net/Hidromasaje-Orbi/hero-hidromasaje.webp" },
 ]
 
 const faqs = [
@@ -57,7 +57,7 @@ export default function HidromasajesPage() {
         h1, h2, h3, h4, h5 { font-family: var(--font-brand) !important; }
         p, span, label, input, textarea { font-family: var(--font-body); }
         
-        .btn-aquatech {
+        .btn-orbi {
           border-radius: 0px !important;
           border: 1px solid rgba(0,0,0,0.1);
           text-transform: uppercase;
@@ -67,7 +67,7 @@ export default function HidromasajesPage() {
           padding: 18px 40px;
           transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .btn-aquatech:hover {
+        .btn-orbi:hover {
           background: #004A87;
           color: white;
           border-color: #004A87;
@@ -76,10 +76,10 @@ export default function HidromasajesPage() {
         
         /* Full Responsiveness Overrides */
         @media (max-width: 1024px) {
-          .aquatech-full-section {
+          .orbi-full-section {
             flex-direction: column !important;
           }
-          .aquatech-work-left, .aquatech-work-right {
+          .orbi-work-left, .orbi-work-right {
              flex: 0 0 100% !important;
              width: 100% !important;
              min-width: 100% !important;
@@ -166,7 +166,7 @@ export default function HidromasajesPage() {
           animate={{ scale: 1, opacity: 0.6 }}
           transition={{ duration: 3 }}
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/hero-hidromasaje.webp')" }}
+          style={{ backgroundImage: "url('https://cesarweb.b-cdn.net/Hidromasaje-Orbi/hero-hidromasaje.webp')" }}
         />
         <div className="absolute inset-0 bg-black/40 z-0"></div>
         
@@ -178,12 +178,12 @@ export default function HidromasajesPage() {
             className="text-5xl sm:text-6xl md:text-[110px] font-black text-white mb-10 tracking-tighter leading-[0.9] md:leading-[0.8] text-center"
           >
             Hidromasaje.<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#004A87] to-[#0070C0]">Excelencia Pura.</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#004A87] to-[#00D1C8]">Excelencia Pura.</span>
           </motion.h1>
 
           <Link 
             href="#catalogo"
-            className="btn-aquatech bg-white text-black"
+            className="btn-orbi bg-white text-black"
           >
             Ver Catálogo 2026
           </Link>
@@ -194,7 +194,7 @@ export default function HidromasajesPage() {
       <section className="section-gap bg-white">
         <div className="central-container flex flex-col items-center">
           <div className="text-center mb-16 md:mb-28 px-4">
-            <span className="text-[#004A87] font-black uppercase tracking-[0.6em] md:tracking-[0.8em] text-[8px] md:text-[10px] mb-6 md:mb-8 block font-brand">Ingeniería Aquatech</span>
+            <span className="text-[#004A87] font-black uppercase tracking-[0.6em] md:tracking-[0.8em] text-[8px] md:text-[10px] mb-6 md:mb-8 block font-brand">Ingeniería Orbi</span>
             <h2 className="text-4xl md:text-[80px] font-black text-black mb-6 md:mb-8 tracking-tighter uppercase whitespace-normal md:whitespace-nowrap leading-none">Modelos Icónicos</h2>
             <div className="w-16 md:w-24 h-1.5 md:h-2 bg-[#004A87] mx-auto"></div>
           </div>
@@ -226,10 +226,10 @@ export default function HidromasajesPage() {
       </section>
 
       {/* Línea de Trabajo + Formulario (65/35 Full Width) */}
-      <section className="aquatech-full-section" style={{ width: '100%', display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', overflow: 'hidden' }}>
+      <section className="orbi-full-section" style={{ width: '100%', display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', overflow: 'hidden' }}>
         
         {/* Lado Izquierdo: Línea de Trabajo (65%) */}
-        <div className="aquatech-work-left" style={{ 
+        <div className="orbi-work-left" style={{ 
           flex: '0 0 60%', 
           backgroundColor: '#ffffff', 
           padding: '80px 60px', 
@@ -307,7 +307,7 @@ export default function HidromasajesPage() {
         </div>
 
         {/* Lado Derecho: Formulario Dinámico (35%) */}
-        <div className="aquatech-work-right" style={{ 
+        <div className="orbi-work-right" style={{ 
           flex: '0 0 40%', 
           backgroundColor: '#004A87', 
           padding: '80px 40px', 
@@ -337,7 +337,7 @@ export default function HidromasajesPage() {
             {/* Lado Izquierdo: CTA Estructural */}
             <div className="cta-side" style={{ 
               backgroundColor: '#050505', 
-              backgroundImage: 'url("https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/hero-hidromasaje.webp")',
+              backgroundImage: 'url("https://cesarweb.b-cdn.net/Hidromasaje-Orbi/hero-hidromasaje.webp")',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               padding: '80px 60px', 
@@ -355,7 +355,7 @@ export default function HidromasajesPage() {
                
                <div style={{ zIndex: 10, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                   <div style={{ border: '1px solid #004A87', color: '#004A87', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: '9px', padding: '8px 16px', marginBottom: '40px', backgroundColor: 'rgba(0, 74, 135, 0.1)' }}>
-                    Garantía Arquitectónica Aquatech
+                    Garantía Arquitectónica Orbi
                   </div>
                   
                   <h2 className="text-3xl md:text-[42px] mb-8" style={{ fontWeight: 900, color: 'white', textTransform: 'uppercase', lineHeight: '1.2', letterSpacing: '0' }}>

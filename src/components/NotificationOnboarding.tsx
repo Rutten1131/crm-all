@@ -57,12 +57,12 @@ const GUIDES: Record<string, { titulo: string; pasos: string[] }> = {
     ]
   },
   iphone: {
-    titulo: 'Instala Aquatech para recibir notificaciones',
+    titulo: 'Instala Orbi para recibir notificaciones',
     pasos: [
       'Abre esta página en Safari (no Chrome)',
       'Toca el botón compartir (cuadrado con flecha)',
       'Toca "Agregar a pantalla de inicio"',
-      'Abre Aquatech desde el ícono y acepta los permisos',
+      'Abre Orbi desde el ícono y acepta los permisos',
     ]
   },
   android: {
@@ -219,7 +219,7 @@ export function NotificationOnboarding({ onDone }: OnboardingProps) {
           border: 1px solid rgba(255, 255, 255, 0.05);
         }
         .step-number {
-          background: #0070c0;
+          background: #00D1C8;
           color: white;
           width: 22px;
           height: 22px;

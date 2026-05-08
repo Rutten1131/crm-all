@@ -307,7 +307,7 @@ export async function DELETE(request: Request) {
         // Determine new name
         let deletedName = originalName
         if (userToDeactivate.role === 'OPERATOR' || userToDeactivate.role === 'SUBCONTRATISTA') {
-          deletedName = `Admin Aquatech/ Operador ${originalName}`
+          deletedName = `Admin Orbi/ Operador ${originalName}`
         } else if (userToDeactivate.role === 'ADMIN' || userToDeactivate.role === 'ADMINISTRADORA' || userToDeactivate.role === 'SUPERADMIN') {
           deletedName = `${originalName} Administrador`
         }

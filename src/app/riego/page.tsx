@@ -57,7 +57,7 @@ export default function RiegoPage() {
         h1, h2, h3, h4, h5 { font-family: var(--font-brand) !important; }
         p, span, label, input, textarea { font-family: var(--font-body); }
         
-        .btn-aquatech {
+        .btn-orbi {
           border-radius: 0px !important;
           border: 1px solid rgba(0,0,0,0.1);
           text-transform: uppercase;
@@ -67,7 +67,7 @@ export default function RiegoPage() {
           padding: 18px 40px;
           transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .btn-aquatech:hover {
+        .btn-orbi:hover {
           background: #004A87;
           color: white;
           border-color: #004A87;
@@ -75,10 +75,10 @@ export default function RiegoPage() {
         }
         
         @media (max-width: 1024px) {
-          .aquatech-full-section {
+          .orbi-full-section {
             flex-direction: column !important;
           }
-          .aquatech-work-left, .aquatech-work-right {
+          .orbi-work-left, .orbi-work-right {
              flex: 0 0 100% !important;
              width: 100% !important;
              min-width: 100% !important;
@@ -177,12 +177,12 @@ export default function RiegoPage() {
             className="text-5xl sm:text-6xl md:text-[110px] font-black text-white mb-10 tracking-tighter leading-[0.9] md:leading-[0.8] text-center"
           >
             Riego Smart.<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#004A87] to-[#0070C0]">Precisión Hídrica.</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#004A87] to-[#00D1C8]">Precisión Hídrica.</span>
           </motion.h1>
 
           <Link 
             href="#catalogo"
-            className="btn-aquatech bg-white text-black"
+            className="btn-orbi bg-white text-black"
           >
             Sistemas Tecnificados
           </Link>
@@ -225,10 +225,10 @@ export default function RiegoPage() {
       </section>
 
       {/* Línea de Trabajo + Formulario */}
-      <section className="aquatech-full-section" style={{ width: '100%', display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', overflow: 'hidden' }}>
+      <section className="orbi-full-section" style={{ width: '100%', display: 'flex', flexWrap: 'wrap', backgroundColor: '#ffffff', overflow: 'hidden' }}>
         
         {/* Lado Izquierdo: Línea de Trabajo (65%) */}
-        <div className="aquatech-work-left" style={{ 
+        <div className="orbi-work-left" style={{ 
           flex: '0 0 60%', 
           backgroundColor: '#ffffff', 
           padding: '80px 60px', 
@@ -301,7 +301,7 @@ export default function RiegoPage() {
         </div>
 
         {/* Lado Derecho: Formulario */}
-        <div className="aquatech-work-right" style={{ 
+        <div className="orbi-work-right" style={{ 
           flex: '0 0 40%', 
           backgroundColor: '#004A87', 
           padding: '80px 40px', 

@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
+import { revalidateRoute } from '@/actions/revalidate'
 import { selectHeadlineAction } from '@/actions/marketing'
 
 const LOADING_PHRASES = [
@@ -15,6 +16,7 @@ const LOADING_PHRASES = [
 
 export default function HeadlineSelector({ pipeline }: { pipeline: any }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadingStep, setLoadingStep] = useState(0)
@@ -42,7 +44,7 @@ export default function HeadlineSelector({ pipeline }: { pipeline: any }) {
 
     const res = await selectHeadlineAction(pipeline.id, selectedId)
     if (res.success) {
-      router.refresh()
+      revalidateRoute(pathname)
     } else {
       setError(res.error || 'Error al generar el artículo pilar.')
       setLoading(false)

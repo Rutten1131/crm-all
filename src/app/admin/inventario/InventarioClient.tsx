@@ -21,7 +21,7 @@ export default function InventarioClient({ initialMaterials }: { initialMaterial
   useEffect(() => {
     if (initialMaterials && initialMaterials.length > 0) {
       try {
-        const request = indexedDB.open('AquatechOfflineDB')
+        const request = indexedDB.open('OrbiOfflineDB')
         request.onsuccess = () => {
           const db = request.result
           // Check if 'materialsCache' store exists
@@ -48,7 +48,7 @@ export default function InventarioClient({ initialMaterials }: { initialMaterial
 
   const loadFromIndexedDB = async () => {
     try {
-      const request = indexedDB.open('AquatechOfflineDB')
+      const request = indexedDB.open('OrbiOfflineDB')
       request.onsuccess = () => {
         const db = request.result
         if (db.objectStoreNames.contains('materialsCache')) {

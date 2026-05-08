@@ -195,25 +195,25 @@ export default function ProjectCacheManager({ userId }: { userId?: number | stri
       overflow: 'hidden',
       transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
       background: isFullyDone
-        ? 'rgba(16, 185, 129, 0.05)'
+        ? 'var(--success-bg)'
         : isWorking
-          ? 'rgba(56, 189, 248, 0.05)'
-          : 'rgba(255, 255, 255, 0.03)',
-      border: `1px solid ${isFullyDone ? 'rgba(16, 185, 129, 0.2)' : isWorking ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255,255,255,0.08)'}`,
-      padding: '12px 20px',
+          ? 'var(--primary-glow)'
+          : 'var(--bg-surface)',
+      border: `1px solid ${isFullyDone ? 'rgba(5, 150, 105, 0.2)' : isWorking ? 'rgba(0, 102, 255, 0.15)' : 'var(--border)'}`,
+      padding: '14px 20px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: '16px',
-      backdropFilter: 'blur(10px)',
-      boxShadow: isFullyDone ? '0 4px 20px rgba(16, 185, 129, 0.1)' : 'none'
+      backdropFilter: 'blur(12px)',
+      boxShadow: isFullyDone ? '0 4px 20px rgba(5, 150, 105, 0.08)' : 'var(--shadow-sm)'
     }}>
       {/* Background Progress Glow */}
       {isSyncing && (
         <div style={{
           position: 'absolute',
           left: 0, top: 0, bottom: 0,
-          background: 'linear-gradient(90deg, rgba(56, 189, 248, 0.1), transparent)',
+          background: 'linear-gradient(90deg, var(--primary-glow-strong), transparent)',
           transition: 'width 0.4s ease-out',
           width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 5}%`,
           zIndex: 0
@@ -222,14 +222,14 @@ export default function ProjectCacheManager({ userId }: { userId?: number | stri
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div style={{
-          width: '36px',
-          height: '36px',
-          borderRadius: '10px',
-          background: isFullyDone ? 'rgba(16, 185, 129, 0.15)' : isWorking ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.1)',
+          width: '38px',
+          height: '38px',
+          borderRadius: '12px',
+          background: isFullyDone ? 'rgba(5, 150, 105, 0.12)' : isWorking ? 'var(--primary-glow-strong)' : 'var(--border)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: isFullyDone ? '#10b981' : isWorking ? '#38bdf8' : 'rgba(255,255,255,0.4)',
+          color: isFullyDone ? 'var(--success)' : isWorking ? 'var(--primary)' : 'var(--text-muted)',
           transition: 'all 0.3s ease'
         }}>
           {isWorking ? (
@@ -253,7 +253,7 @@ export default function ProjectCacheManager({ userId }: { userId?: number | stri
             margin: 0,
             fontSize: '0.9rem',
             fontWeight: '600',
-            color: isFullyDone ? '#10b981' : 'white',
+            color: isFullyDone ? 'var(--success)' : 'var(--text)',
             display: 'flex',
             alignItems: 'center',
             gap: '8px'
@@ -266,12 +266,12 @@ export default function ProjectCacheManager({ userId }: { userId?: number | stri
                   ? 'Sincronizado Offline'
                   : 'Estado Offline'}
             {isSyncing && progress.total > 0 && (
-              <span style={{ fontSize: '0.75rem', opacity: 0.6, fontWeight: 'normal' }}>
+              <span style={{ fontSize: '0.75rem', opacity: 0.6, fontWeight: 'normal', color: 'var(--text-secondary)' }}>
                 ({progress.current}/{progress.total})
               </span>
             )}
           </h4>
-          <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>
+          <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
             {isSyncing
               ? 'Descargando chats y tareas en base de datos local.'
               : isOptimizingAssets
@@ -280,6 +280,7 @@ export default function ProjectCacheManager({ userId }: { userId?: number | stri
                   ? 'Todos los datos y archivos de interfaz están listos para trabajar sin conexión.'
                   : 'Iniciando descarga de datos necesarios...'}
           </p>
+
         </div>
       </div>
 
@@ -289,22 +290,23 @@ export default function ProjectCacheManager({ userId }: { userId?: number | stri
              display: 'flex',
              alignItems: 'center',
              gap: '8px',
-             background: 'rgba(16, 185, 129, 0.1)',
-             color: '#10b981',
+             background: 'var(--success-bg)',
+             color: 'var(--success)',
              padding: '6px 12px',
              borderRadius: '8px',
              fontSize: '0.75rem',
              fontWeight: 'bold',
-             border: '1px solid rgba(16, 185, 129, 0.2)'
+             border: '1px solid rgba(5, 150, 105, 0.15)'
            }}>
-             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--success)', display: 'inline-block' }} />
              Listo para usar
            </div>
         ) : isSyncing ? (
-          <div style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 'bold' }}>
+          <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 'bold' }}>
             {Math.round((progress.current / (progress.total || 1)) * 100)}%
           </div>
         ) : null}
+
 
         {/* Dismiss Button */}
         <button 
@@ -312,16 +314,23 @@ export default function ProjectCacheManager({ userId }: { userId?: number | stri
           style={{
             background: 'none',
             border: 'none',
-            color: 'rgba(255,255,255,0.3)',
+            color: 'var(--text-muted)',
             cursor: 'pointer',
             padding: '4px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            transition: 'color 0.2s ease'
+            transition: 'all 0.2s ease'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
-          onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'var(--text)';
+            e.currentTarget.style.transform = 'scale(1.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--text-muted)';
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+
           title="Cerrar aviso"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -337,8 +346,8 @@ export default function ProjectCacheManager({ userId }: { userId?: number | stri
           to { transform: rotate(360deg); }
         }
         .project-cache-status:hover {
-          background: ${isFullyDone ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255,255,255,0.05)'};
-          border-color: ${isFullyDone ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255,255,255,0.15)'};
+          background: ${isFullyDone ? 'var(--success-bg)' : 'var(--primary-glow)'};
+          border-color: ${isFullyDone ? 'rgba(5, 150, 105, 0.4)' : 'rgba(0, 102, 255, 0.25)'};
         }
       `}</style>
     </div>

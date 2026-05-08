@@ -3,7 +3,8 @@
 import React, { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { refineArticleAction, updateArticleContentAction, forcePipelineStatusAction } from '@/actions/marketing'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
+import { revalidateRoute } from '@/actions/revalidate'
 
 interface ArticleDualEditorProps {
   article: any
@@ -16,6 +17,7 @@ export default function ArticleDualEditor({ article, pipelineId }: ArticleDualEd
   const [isAsking, setIsAsking] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
 
   const handleSave = async () => {
     if (!article?.id) return { success: false, error: 'Artículo no identificado' }
@@ -56,7 +58,7 @@ export default function ArticleDualEditor({ article, pipelineId }: ArticleDualEd
 
     const res = await forcePipelineStatusAction(pipelineId, 'GENERATING_IMAGES')
     if (res.success) {
-        router.refresh()
+        revalidateRoute(pathname)
     } else {
         alert('Error al avanzar fase: ' + res.error)
     }

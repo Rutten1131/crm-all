@@ -7,6 +7,7 @@ import { isAdmin, isOperator } from '@/lib/rbac'
 import { notifyUser, notifyAdmins } from '@/lib/push'
 import { sendWhatsAppMessage } from '@/lib/whatsapp'
 import { uploadToBunny } from '@/lib/bunny'
+import { deepSerialize } from '@/lib/serializable'
 
 export async function GET(request: Request) {
   try {
@@ -87,7 +88,7 @@ export async function GET(request: Request) {
       unreadCount: unreadCountsMap[project.id] || 0
     }))
 
-    return NextResponse.json(projectsWithCounts)
+    return NextResponse.json(deepSerialize(projectsWithCounts))
   } catch (error) {
     console.error('Error fetching projects:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
@@ -143,7 +144,7 @@ export async function POST(request: Request) {
                 where: { id: Number(existing.resultId) },
                 include: { client: true, phases: true, team: { include: { user: true } } }
              });
-             return NextResponse.json(existingProject || { success: true, id: Number(existing.resultId), isDuplicate: true });
+              return NextResponse.json(deepSerialize(existingProject) || { success: true, id: Number(existing.resultId), isDuplicate: true });
           }
           // v367: Hijack Stall
           if (existing && existing.createdAt < new Date(Date.now() - 120000)) {
@@ -169,7 +170,7 @@ export async function POST(request: Request) {
 
     if (existingRecentProject) {
       console.log(`[IDEMPOTENCY] Project "${title}" already created recently (ID: ${existingRecentProject.id})`);
-      return NextResponse.json(existingRecentProject, { status: 201 });
+      return NextResponse.json(deepSerialize(existingRecentProject), { status: 201 });
     }
 
     // 0.1 Handle Base64 files before transaction
@@ -368,7 +369,7 @@ export async function POST(request: Request) {
 
           // WhatsApp
           if (user.phone) {
-            const message = `🚀 *Aquatech CRM*\nHola ${user.name},\nhas sido asignado al proyecto: *${title}*.\nPor favor, revisa la plataforma para más detalles.`;
+            const message = `🚀 *ALL CRM*\nHola ${user.name},\nhas sido asignado al proyecto: *${title}*.\nPor favor, revisa la plataforma para más detalles.`;
             sendWhatsAppMessage(user.phone, message).catch((e) => console.error('WA error:', e));
           }
 
@@ -388,7 +389,7 @@ export async function POST(request: Request) {
       `new-project-${project.id}`
     ).catch(e => console.error('Admin notify error:', e));
 
-    return NextResponse.json(project, { status: 201 })
+    return NextResponse.json(deepSerialize(project), { status: 201 })
   } catch (error: any) {
     console.error('Error creating project:', error)
     if (error.code === 'P2002') {

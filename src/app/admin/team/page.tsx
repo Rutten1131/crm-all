@@ -324,7 +324,7 @@ export default function TeamPage() {
                 <div className="modal-basic-fields">
                   <div className="form-group" style={{ gridColumn: 'span 2' }}>
                     <label className="input-label-premium">Nombre Completo *</label>
-                    <input type="text" className="form-input-premium" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Ej: Abel Aquatech" />
+                    <input type="text" className="form-input-premium" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Ej: Abel Orbi" />
                   </div>
                   
                   <div className="form-group">
@@ -370,7 +370,7 @@ export default function TeamPage() {
               <div className="modal-contact-fields">
                 <div className="form-group">
                   <label className="input-label-premium">Correo Electrónico *</label>
-                  <input type="email" className="form-input-premium" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="ejemplo@aquatech.com" />
+                  <input type="email" className="form-input-premium" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="ejemplo@orbi.com" />
                 </div>
                 <div className="form-group">
                   <label className="input-label-premium">Teléfono</label>

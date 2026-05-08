@@ -11,14 +11,13 @@ import OfflinePrefetcher from '@/components/OfflinePrefetcher'
 import ProjectCacheManager from '@/components/ProjectCacheManager'
 
 /**
- * AQUATECH_PROJECT_VIEW_V3
+ * ORBI_PROJECT_VIEW_V3
  * Refactorización con enfoque en alto contraste y robustez de UI.
  */
 
 export default function ProyectosPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [initialCacheLoaded, setInitialCacheLoaded] = useState(false) // v267: track if we at least have cache
   const [statusFilter, setStatusFilter] = useState('ALL')
@@ -26,6 +25,12 @@ export default function ProyectosPage() {
   const [visibleCount, setVisibleCount] = useState(10)
   const PAGE_SIZE = 10
   const [updatingId, setUpdatingId] = useState<number | null>(null)
+
+  // v374: Fully reactive project list via Dexie
+  const projects = useLiveQuery(async () => {
+    const items = await db.projectsCache.toArray();
+    return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }) || [];
 
   // Authorization check that handles both online (session) and offline (cached session)
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
@@ -73,20 +78,9 @@ export default function ProyectosPage() {
 
   useEffect(() => {
     if (isAuthorized === true) {
-      // v267: Fast-path cache loading
-      db.projectsCache.toArray().then(cached => {
-        if (cached.length > 0) {
-          const sorted = cached.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          setProjects(sorted)
-        }
-        setInitialCacheLoaded(true)
-        // If we have cache, we can stop the 'full-page' loading spinner earlier
-        if (cached.length > 0) setLoading(false)
-      }).finally(() => {
-        // Safety timeout: Never stay in loading more than 3 seconds
-        setTimeout(() => setLoading(false), 3000)
-      })
-
+      setInitialCacheLoaded(true)
+      setLoading(false)
+      
       fetchProjects()
       
       const interval = setInterval(fetchProjects, 30000)
@@ -100,28 +94,7 @@ export default function ProyectosPage() {
     }
   }, [isAuthorized])
 
-  // v352: Listen for PROJECT_SYNCED from the Service Worker to add synced projects instantly
-  useEffect(() => {
-    const handleSwMessage = async (event: MessageEvent) => {
-      if (event.data?.type === 'PROJECT_SYNCED' && event.data?.projectId) {
-        console.log('[AdminProyectos] SW synced project:', event.data.projectId);
-        try {
-          const cached = await db.projectsCache.get(event.data.projectId);
-          if (cached) {
-            setProjects(prev => {
-              const exists = prev.some(p => p.id === cached.id);
-              if (exists) return prev;
-              return [cached, ...prev];
-            });
-          }
-        } catch (e) {
-          console.warn('[AdminProyectos] Could not read synced project:', e);
-        }
-      }
-    };
-    navigator.serviceWorker?.addEventListener('message', handleSwMessage);
-    return () => navigator.serviceWorker?.removeEventListener('message', handleSwMessage);
-  }, []);
+  // v352: NO longer needed manual setProjects for SW messages as useLiveQuery reacts to DB changes
 
   const fetchProjects = async () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) return; // Don't fetch if explicitly offline
@@ -132,9 +105,9 @@ export default function ProyectosPage() {
       const data = await res.json()
       
       if (Array.isArray(data)) {
-        setProjects(data)
+        // v374: No longer calling setProjects here. DB update will trigger useLiveQuery.
         
-        // v289: Warm cache for the first batch of projects
+        // v289: Warm cache for the first batch of liveProjects
         if (data.length > 0) {
           warmCache(data.slice(0, 15));
         }
@@ -154,17 +127,12 @@ export default function ProyectosPage() {
             return item
           })
           
-          db.projectsCache.bulkPut(bulkUpdates).catch(err => console.error('Error caching projects:', err))
+          db.projectsCache.bulkPut(bulkUpdates).catch(err => console.error('Error caching liveProjects:', err))
         }
       }
     } catch (e) {
       console.error('fetchProjects fallback:', e)
-      // Already loaded from cache initially, but try again just in case
-      const cached = await db.projectsCache.toArray()
-      if (cached.length > 0) {
-        const sorted = cached.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        setProjects(sorted)
-      }
+      // Already handled by useLiveQuery
     } finally {
       setLoading(false)
     }
@@ -195,7 +163,7 @@ export default function ProyectosPage() {
 
       if (newProjects.length > 0) {
         const urls = newProjects.map(p => `/admin/proyectos/${p.id}`);
-        console.log(`[WarmCache] Messaging SW to pre-cache ${urls.length} NEW projects`);
+        console.log(`[WarmCache] Messaging SW to pre-cache ${urls.length} NEW liveProjects`);
         
         navigator.serviceWorker.controller.postMessage({
           type: 'PRECACHE_URLS',
@@ -241,7 +209,7 @@ export default function ProyectosPage() {
         body: JSON.stringify({ status: newStatus })
       })
       if (res.ok) {
-        setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p))
+        await db.projectsCache.update(projectId, { status: newStatus });
       }
     } catch (e) {
       console.error(e)
@@ -352,7 +320,7 @@ export default function ProyectosPage() {
 
       {/* Search Bar */}
       <div style={{ marginBottom: '20px', position: 'relative' }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2.5"
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5"
           style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
         >
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -366,23 +334,23 @@ export default function ProyectosPage() {
             width: '100%',
             padding: '14px 16px 14px 48px',
             borderRadius: '14px',
-            border: '1px solid rgba(255,255,255,0.1)',
-            backgroundColor: 'rgba(255,255,255,0.05)',
-            color: '#FFFFFF',
+            border: '1px solid var(--border)',
+            backgroundColor: 'var(--bg-input)',
+            color: 'var(--text)',
             fontSize: '0.95rem',
             fontWeight: '500',
             outline: 'none',
             transition: 'all 0.2s ease'
           }}
-          onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.backgroundColor = 'rgba(255,255,255,0.08)' }}
-          onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.backgroundColor = 'rgba(255,255,255,0.05)' }}
+          onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.backgroundColor = 'var(--bg-surface)' }}
+          onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.backgroundColor = 'var(--bg-input)' }}
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
             style={{
               position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
-              background: 'rgba(255,255,255,0.1)', border: 'none', color: 'rgba(255,255,255,0.6)',
+              background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-muted)',
               borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem'
             }}
@@ -398,11 +366,12 @@ export default function ProyectosPage() {
           onClick={() => setStatusFilter('ALL')}
           style={{
             padding: '12px 28px', borderRadius: '40px', fontSize: '0.95rem', fontWeight: '800',
-            border: 'none',
-            backgroundColor: statusFilter === 'ALL' ? 'var(--primary)' : 'rgba(255,255,255,0.08)',
-            color: statusFilter === 'ALL' ? '#0F172A' : 'rgba(255,255,255,0.6)',
+            border: '1px solid',
+            borderColor: statusFilter === 'ALL' ? 'var(--primary)' : 'var(--border)',
+            backgroundColor: statusFilter === 'ALL' ? 'var(--primary)' : 'var(--bg-surface)',
+            color: statusFilter === 'ALL' ? '#FFFFFF' : 'var(--text-muted)',
             cursor: 'pointer', transition: 'all 0.2s ease',
-            boxShadow: statusFilter === 'ALL' ? '0 10px 20px -5px rgba(56, 189, 248, 0.4)' : 'none'
+            boxShadow: statusFilter === 'ALL' ? '0 10px 20px -5px rgba(0, 102, 255, 0.4)' : 'none'
           }}
         >
           Todos
@@ -414,9 +383,9 @@ export default function ProyectosPage() {
             onClick={() => setStatusFilter(opt.id)}
             style={{
               padding: '12px 28px', borderRadius: '40px', fontSize: '0.95rem', fontWeight: '800',
-              border: statusFilter === opt.id ? `2px solid ${opt.color}` : '2px solid transparent',
-              backgroundColor: statusFilter === opt.id ? `${opt.color}25` : 'rgba(255,255,255,0.08)',
-              color: statusFilter === opt.id ? opt.color : 'rgba(255,255,255,0.6)',
+              border: statusFilter === opt.id ? `1px solid ${opt.color}` : '1px solid var(--border)',
+              backgroundColor: statusFilter === opt.id ? `${opt.color}15` : 'var(--bg-surface)',
+              color: statusFilter === opt.id ? opt.color : 'var(--text-muted)',
               cursor: 'pointer', transition: 'all 0.2s ease',
               boxShadow: statusFilter === opt.id ? `0 10px 25px -5px ${opt.color}30` : 'none'
             }}
@@ -434,7 +403,7 @@ export default function ProyectosPage() {
 
         {/* Result count indicator */}
         {searchQuery && (
-          <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.4)', fontWeight: '600', marginLeft: 'auto' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600', marginLeft: 'auto' }}>
             {filteredProjects.length} resultado{filteredProjects.length !== 1 ? 's' : ''}
           </span>
         )}
@@ -541,7 +510,7 @@ export default function ProyectosPage() {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px 0' }}>
-                      <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '800', lineHeight: '1.3', color: '#FFFFFF' }}>{p.title}</h3>
+                      <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '800', lineHeight: '1.3', color: 'var(--text)' }}>{p.title}</h3>
                       {p.unreadCount > 0 && (
                         <span style={{
                           backgroundColor: '#EF4444',
@@ -575,14 +544,14 @@ export default function ProyectosPage() {
                         {p.client?.name || 'Cliente sin asignar'}
                       </p>
                       {p.city && (
-                        <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '12px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border)', padding: '2px 8px', borderRadius: '12px' }}>
                           📍 {p.city}
                         </span>
                       )}
                     </div>
 
                     {p.estimatedBudget > 0 && (
-                      <div style={{ marginBottom: '15px', padding: '10px 15px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div style={{ marginBottom: '15px', padding: '10px 15px', borderRadius: '12px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Presupuesto Estimado</span>
                         <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--primary)' }}>
                           ${p.estimatedBudget.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -593,11 +562,11 @@ export default function ProyectosPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
                         <div style={{ marginTop: '10px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', marginBottom: '8px', fontWeight: '700' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: '700' }}>
                             <span>Progreso de Obra</span>
                             <span>{progress}%</span>
                           </div>
-                          <div style={{ height: '8px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden' }}>
+                          <div style={{ height: '8px', backgroundColor: 'var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
                             <div style={{ 
                                 width: `${progress}%`, 
                                 height: '100%', 
@@ -609,7 +578,7 @@ export default function ProyectosPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '700' }}>{p.team?.length || 0}</span>
@@ -631,19 +600,19 @@ export default function ProyectosPage() {
             gridColumn: '1 / -1', 
             padding: '100px 20px', 
             textAlign: 'center', 
-            backgroundColor: 'rgba(255,255,255,0.02)', 
+            backgroundColor: 'var(--bg-surface)', 
             borderRadius: '24px',
-            border: '2px dashed rgba(255,255,255,0.08)'
+            border: '2px dashed var(--border)'
           }}>
-            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" style={{ marginBottom: '20px' }}>
+            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--border)" strokeWidth="1" style={{ marginBottom: '20px' }}>
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '10px', fontSize: '1.5rem' }}>
+            <h3 style={{ color: 'var(--text)', marginBottom: '10px', fontSize: '1.5rem' }}>
               {searchQuery 
                 ? `No se encontraron resultados para "${searchQuery}"` 
                 : (statusFilter === 'ALL' ? 'Sin proyectos' : `No hay proyectos "${getStatusLabel(statusFilter)}"`)}
             </h3>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1rem' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
               {searchQuery 
                 ? 'Intenta con otro término de búsqueda.' 
                 : 'Intenta cambiar el filtro o crear un nuevo registro.'}
@@ -665,9 +634,9 @@ export default function ProyectosPage() {
             style={{
               padding: '14px 40px',
               borderRadius: '14px',
-              border: '1px solid rgba(255,255,255,0.12)',
-              backgroundColor: 'rgba(255,255,255,0.05)',
-              color: 'rgba(255,255,255,0.8)',
+              border: '1px solid var(--border)',
+              backgroundColor: 'var(--bg-surface)',
+              color: 'var(--text-secondary)',
               fontSize: '0.95rem',
               fontWeight: '700',
               cursor: 'pointer',
@@ -676,8 +645,8 @@ export default function ProyectosPage() {
               alignItems: 'center',
               gap: '8px'
             }}
-            onMouseEnter={(e) => { (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'; (e.target as HTMLElement).style.borderColor = 'var(--primary)' }}
-            onMouseLeave={(e) => { (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.05)'; (e.target as HTMLElement).style.borderColor = 'rgba(255,255,255,0.12)' }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.backgroundColor = 'var(--bg-card-hover)'; (e.target as HTMLElement).style.borderColor = 'var(--primary)' }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.backgroundColor = 'var(--bg-surface)'; (e.target as HTMLElement).style.borderColor = 'var(--border)' }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9"/>
@@ -689,7 +658,7 @@ export default function ProyectosPage() {
 
       {/* Pagination info */}
       {filteredProjects.length > 0 && (
-        <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)', fontWeight: '600' }}>
+        <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>
           Mostrando {Math.min(visibleCount, filteredProjects.length)} de {filteredProjects.length} proyecto{filteredProjects.length !== 1 ? 's' : ''}
         </p>
       )}

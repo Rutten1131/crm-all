@@ -102,7 +102,7 @@ export default function QuoteDetailClient({ quote, projects = [] }: any) {
         docType: 'COTIZACIÓN',
         docId: currentQuote.id,
         notes: currentQuote.notes,
-        sellerName: session?.user?.name || currentQuote.creator?.name || 'Aquatech',
+        sellerName: session?.user?.name || currentQuote.creator?.name || 'Orbi',
         action: 'instance',
         optionalSection: {
           title: currentQuote.optionalTitle || '',
@@ -173,7 +173,7 @@ export default function QuoteDetailClient({ quote, projects = [] }: any) {
       docType: 'COTIZACIÓN',
       docId: currentQuote.id,
       notes: currentQuote.notes,
-      sellerName: session?.user?.name || currentQuote.creator?.name || 'Aquatech',
+      sellerName: session?.user?.name || currentQuote.creator?.name || 'Orbi',
       optionalSection: {
         title: currentQuote.optionalTitle || '',
         description: currentQuote.optionalDescription || '',

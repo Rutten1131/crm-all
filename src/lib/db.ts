@@ -85,7 +85,7 @@ export class OfflineDatabase extends Dexie {
 
 
   constructor() {
-    super('AquatechOfflineDB');
+    super('OrbiOfflineDB');
     this.version(2).stores({
       outbox: '++id, projectId, status, timestamp',
       auth: 'id'

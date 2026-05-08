@@ -6,6 +6,7 @@ import { sendWhatsAppMessage } from '@/lib/whatsapp'
 import { formatTimeEcuador, forceEcuadorTZ, formatDateEcuador } from '@/lib/date-utils'
 import { isAdmin as checkIsAdmin, hasModuleAccess } from '@/lib/rbac'
 import { notifyUser } from '@/lib/push'
+import { deepSerialize } from '@/lib/serializable'
 
 export async function GET(request: Request) {
   try {
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
       orderBy: { startTime: 'asc' }
     })
 
-    return NextResponse.json(appointments)
+    return NextResponse.json(deepSerialize(appointments))
   } catch (error) {
     console.error('Error fetching appointments:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
@@ -230,7 +231,7 @@ export async function POST(request: Request) {
                 linksText += `\n\n🔊 *Audios (Respaldo):*\n${audioLinks.map((a: any) => `• [Escuchar Audio](${a.url})`).join('\n')}`;
               }
 
-              const message = `*Notificación Aquatech*\n\nHola ${appointment.user.name}, tienes una *nueva tarea* asignada:\n📌 *${title}*\n📅 Fecha: ${startDateLocale}\n⏰ Hora: ${startTimeLocale}${descrText}${nameClientText}${phoneClientText}${locClientText}${locOpText}${fileManifest}${linksText}\n\nConsulta más detalles en tu perfil.`;
+              const message = `*Notificación Orbi*\n\nHola ${appointment.user.name}, tienes una *nueva tarea* asignada:\n📌 *${title}*\n📅 Fecha: ${startDateLocale}\n⏰ Hora: ${startTimeLocale}${descrText}${nameClientText}${phoneClientText}${locClientText}${locOpText}${fileManifest}${linksText}\n\nConsulta más detalles en tu perfil.`;
 
               await sendWhatsAppMessage(appointment.user.phone, message, attachments);
             } catch (err) {
@@ -249,7 +250,7 @@ export async function POST(request: Request) {
 
     await sendNotificationsSafe();
 
-    return NextResponse.json(results.length === 1 ? results[0] : results, { status: 201 })
+    return NextResponse.json(deepSerialize(results.length === 1 ? results[0] : results), { status: 201 })
   } catch (error) {
     console.error('Error creating appointment:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

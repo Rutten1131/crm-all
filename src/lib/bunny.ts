@@ -6,7 +6,7 @@ const BUNNY_PULLZONE_URL = process.env.BUNNY_PULLZONE_URL!
 export async function uploadToBunny(
   file: Buffer,
   filename: string,
-  folder: string = 'aquatech-crm',
+  folder: string = 'orbi-crm',
   mimeType?: string
 ): Promise<string> {
   const timestamp = Date.now()

@@ -1,10 +1,10 @@
 const SW_VERSION = 'v371-crash-fix';
 const VERSION = SW_VERSION;
-const STATIC_CACHE = `aquatech-static-${SW_VERSION}`;
-const PAGES_CACHE  = `aquatech-pages-${SW_VERSION}`;
-const ASSETS_CACHE = `aquatech-assets-${SW_VERSION}`;
-const FONTS_CACHE  = `aquatech-fonts-${SW_VERSION}`;
-const RSC_CACHE    = `aquatech-rsc-${SW_VERSION}`;
+const STATIC_CACHE = `orbi-static-${SW_VERSION}`;
+const PAGES_CACHE  = `orbi-pages-${SW_VERSION}`;
+const ASSETS_CACHE = `orbi-assets-${SW_VERSION}`;
+const FONTS_CACHE  = `orbi-fonts-${SW_VERSION}`;
+const RSC_CACHE    = `orbi-rsc-${SW_VERSION}`;
 
 // ─── v337: SELF-WAKING POLLER ───────────────────────────────
 // The ONLY reliable way to ensure background sync on mobile devices.
@@ -27,7 +27,7 @@ function startOutboxPoller() {
   outboxPollerInterval = setInterval(async () => {
     pollerCheckCount++;
     try {
-      const db = await openAquatechDB();
+      const db = await openOrbiDB();
       const result = await new Promise((resolve) => {
         const tx = db.transaction(['outbox'], 'readonly');
         const countReq = tx.objectStore('outbox').count();
@@ -261,12 +261,12 @@ self.addEventListener('activate', (event) => {
   console.log('[SW] Activating...');
   // DON'T delete any caches — they must survive across SW updates
   // (especially when the update happens while the user is offline)
-  // Old versioned caches (aquatech-*-v42, etc.) can be cleaned up safely
+  // Old versioned caches (orbi-*-v42, etc.) can be cleaned up safely
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(key => key.startsWith('aquatech-') && key.match(/-v\d+$/) && !key.includes(VERSION))
+          .filter(key => key.startsWith('orbi-') && key.match(/-v\d+$/) && !key.includes(VERSION))
           .map(key => {
             console.log('[SW] Removing old versioned cache:', key);
             return caches.delete(key);
@@ -367,7 +367,7 @@ self.addEventListener('fetch', (event) => {
     }
     
     // v301: Increased API timeout to 15s for slower VPS responses
-    event.respondWith(networkFirst(request, 'aquatech-apis-v1', 15000));
+    event.respondWith(networkFirst(request, 'orbi-apis-v1', 15000));
     return;
   }
 
@@ -888,7 +888,7 @@ async function findCachedPage(requestUrl, pathname, forceServe = false) {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Sin conexión | Aquatech</title>
+      <title>Sin conexión | Orbi</title>
       <style>
         body { font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: white; text-align: center; }
         .card { background: #1e293b; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); max-width: 400px; }
@@ -950,7 +950,7 @@ async function networkFirst(request, cacheName, timeout = 10000) {
         console.warn(`[SW] Chunk obsoleto detectado en red (404): ${url.pathname}. Forzando recarga...`);
         caches.keys().then(keys => {
           keys.forEach(k => {
-            if (k.startsWith('aquatech-pages') || k.startsWith('aquatech-rsc')) {
+            if (k.startsWith('orbi-pages') || k.startsWith('orbi-rsc')) {
               caches.delete(k);
             }
           });
@@ -976,7 +976,7 @@ async function networkFirst(request, cacheName, timeout = 10000) {
     if (isNextChunk) {
       console.warn('[SW] Critical chunk missing offline:', url.pathname);
       return new Response(
-        'console.error("Aquatech: Chunk load failed offline. Please reconnect.");',
+        'console.error("Orbi: Chunk load failed offline. Please reconnect.");',
         { status: 200, headers: { 'Content-Type': 'application/javascript' } }
       );
     }
@@ -1044,7 +1044,7 @@ async function staleWhileRevalidate(request, cacheName) {
       console.warn(`[SW] Chunk obsoleto detectado (404): ${url.pathname}. Limpiando caché y recargando...`);
       caches.keys().then(keys => {
         keys.forEach(k => {
-          if (k.startsWith('aquatech-pages') || k.startsWith('aquatech-rsc')) {
+          if (k.startsWith('orbi-pages') || k.startsWith('orbi-rsc')) {
             caches.delete(k);
           }
         });
@@ -1108,7 +1108,7 @@ function isStaticAsset(pathname) {
  */
 function getAuthFromIndexedDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('AquatechOfflineDB');
+    const request = indexedDB.open('OrbiOfflineDB');
     request.onerror = () => resolve(null);
     request.onsuccess = () => {
       const db = request.result;
@@ -1133,7 +1133,7 @@ self.addEventListener('message', (event) => {
   
   if (event.data === 'clearCache') {
     caches.keys().then(keys => 
-      Promise.all(keys.filter(k => k.startsWith('aquatech-')).map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => k.startsWith('orbi-')).map(k => caches.delete(k)))
     ).then(() => {
       event.source?.postMessage({ type: 'cacheCleared' });
     });
@@ -1375,10 +1375,10 @@ self.addEventListener('periodicsync', (event) => {
 });
 
 
-function openAquatechDB() {
+function openOrbiDB() {
   return new Promise((resolve, reject) => {
     // v322: Abrir la DB sin especificar versión para no chocar con la versión 150 de Dexie
-    const request = indexedDB.open('AquatechOfflineDB');
+    const request = indexedDB.open('OrbiOfflineDB');
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
     request.onblocked = () => {
@@ -1398,7 +1398,7 @@ function openAquatechDB() {
  */
 async function logSyncSW(level, message, type = 'general', details = '') {
   try {
-    const db = await openAquatechDB();
+    const db = await openOrbiDB();
     const tx = db.transaction(['syncLogs'], 'readwrite');
     const store = tx.objectStore('syncLogs');
     store.add({
@@ -1460,7 +1460,7 @@ async function processOutboxSync(isForced = false, specificType = null) {
 async function _internalProcessOutbox(isForced = false, specificType = null) {
   let db;
   try {
-    db = await openAquatechDB();
+    db = await openOrbiDB();
   } catch (err) {
     console.error('[SW] Failed to open IndexedDB for sync:', err);
     return;
@@ -1471,7 +1471,7 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
     const GLOBAL_SYNC_TIMEOUT_MS = 45 * 60 * 1000; // 45 minutos máximo por ciclo completo
     const globalSyncTimer = setTimeout(async () => {
       try {
-        const dbT = await openAquatechDB();
+        const dbT = await openOrbiDB();
         const tx = dbT.transaction(['outbox'], 'readwrite');
         const store = tx.objectStore('outbox');
         const req = store.getAll();
@@ -1589,7 +1589,7 @@ async function _internalProcessOutbox(isForced = false, specificType = null) {
       try {
         // v325: Solo mostrar notificación si hay internet o es forzado, para evitar el titileo offline
         if (self.Notification && self.Notification.permission === 'granted' && (navigator.onLine || isForced)) {
-          await self.registration.showNotification('Sincronizando Aquatech', {
+          await self.registration.showNotification('Sincronizando Orbi', {
             body: `Procesando ${pendingItems.length} cambios en segundo plano...`,
             icon: '/icon-192.png',
             tag: 'sync-progress',
@@ -2010,7 +2010,7 @@ const uploadInChunksSW = async (blob, filename, subfolder = 'uploads', mimeType 
                     try {
                       if (self.Notification && self.Notification.permission === 'granted') {
                         const percent = Math.round(((i + 1) / totalChunks) * 100);
-                        await self.registration.showNotification('Sincronizando Aquatech', {
+                        await self.registration.showNotification('Sincronizando Orbi', {
                           body: `Subiendo ${filename}: ${percent}% (${i + 1}/${totalChunks})`,
                           tag: 'sync-progress',
                           silent: true,
@@ -2410,7 +2410,7 @@ const uploadInChunksSW = async (blob, filename, subfolder = 'uploads', mimeType 
 
         // v316: Enviar señal de fin de ciclo para que la UI se actualice (indicador verde)
         try {
-          const syncChannel = new BroadcastChannel('aquatech-sync');
+          const syncChannel = new BroadcastChannel('orbi-sync');
           syncChannel.postMessage({ type: 'OUTBOX_SYNC_FINISHED' });
         } catch(e) {}
 
@@ -2431,7 +2431,7 @@ const uploadInChunksSW = async (blob, filename, subfolder = 'uploads', mimeType 
 
         // v286: Improved retry check - check if there are still items to sync
         try {
-          const dbRetry = await openAquatechDB();
+          const dbRetry = await openOrbiDB();
           const count = await new Promise(r => {
             try {
               const tx = dbRetry.transaction(['outbox'], 'readonly');
@@ -2461,7 +2461,7 @@ const uploadInChunksSW = async (blob, filename, subfolder = 'uploads', mimeType 
                 retryIndex++;
                 processOutboxSync(false).finally(() => {
                   // Después de cada intento, verificar si quedan items
-                  openAquatechDB().then(dbCheck => {
+                  openOrbiDB().then(dbCheck => {
                     const txCheck = dbCheck.transaction(['outbox'], 'readonly');
                     const reqCheck = txCheck.objectStore('outbox').count();
                     reqCheck.onsuccess = () => {
@@ -2507,7 +2507,7 @@ self.addEventListener('backgroundfetchsuccess', (event) => {
       
       if (allOk) {
         // Notify client and cleanup outbox if needed
-        const channel = new BroadcastChannel('aquatech-sync');
+        const channel = new BroadcastChannel('orbi-sync');
         channel.postMessage({ 
           type: 'SYNC_FINISHED', 
           success: true, 
@@ -2530,7 +2530,7 @@ self.addEventListener('backgroundfetchfail', (event) => {
   console.error('[SW] Background Fetch Failed:', event.registration.id);
   event.waitUntil(async function() {
     await event.updateUI({ title: '❌ Sincronización Fallida' });
-    const channel = new BroadcastChannel('aquatech-sync');
+    const channel = new BroadcastChannel('orbi-sync');
     channel.postMessage({ 
       type: 'SYNC_FINISHED', 
       success: false, 
@@ -2566,7 +2566,7 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data?.json() || {};
   } catch (e) {
-    data = { title: 'Aquatech CRM', body: event.data?.text() || 'Nueva notificación' };
+    data = { title: 'Orbi CRM', body: event.data?.text() || 'Nueva notificación' };
   }
 
   // v334: Silent push — wake up SW only, no visible notification
@@ -2581,7 +2581,7 @@ self.addEventListener('push', (event) => {
     icon: data.icon || '/icon-192.png',
     badge: data.badge || '/icon-192.png',
     vibrate: [200, 100, 200, 100, 400],
-    tag: data.tag || 'aquatech-update',
+    tag: data.tag || 'orbi-update',
     renotify: true,
     requireInteraction: true,
     silent: false,
@@ -2601,7 +2601,7 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || '🔔 Aquatech CRM', options)
+    self.registration.showNotification(data.title || '🔔 Orbi CRM', options)
   );
 });
 
@@ -2657,3 +2657,4 @@ self.addEventListener('notificationclick', (event) => {
     return clients.openWindow(targetUrl);
   })());
 });
+

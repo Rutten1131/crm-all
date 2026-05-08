@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  const password = 'aquatech123'
+  const password = 'orbi123'
   const salt = await bcrypt.genSalt(10)
   const hash = await bcrypt.hash(password, salt)
   
@@ -13,7 +13,7 @@ async function main() {
     data: { passwordHash: hash }
   })
   
-  console.log('Password for user "Prueba" has been reset to "aquatech123"')
+  console.log('Password for user "Prueba" has been reset to "orbi123"')
 }
 
 main()

@@ -5,30 +5,33 @@
    ────────────────────────────────────── */
 
 /* ──────────────────────────────────────
-   DESIGN TOKENS — AQUATECH ADMIN
+   DESIGN TOKENS — ALL BRAND IDENTITY
    ────────────────────────────────────── */
 :root {
-  /* Brand Colors */
-  --primary: #38BDF8;
-  --primary-hover: #22A8E8;
-  --primary-dark: #0369A1;
-  --primary-glow: rgba(56, 189, 248, 0.15);
-  --primary-glow-strong: rgba(56, 189, 248, 0.3);
+  /* Brand Colors — ALL */
+  --primary: #00D1C8;
+  --primary-hover: #00B8B0;
+  --primary-dark: #009E97;
+  --primary-glow: rgba(0, 209, 200, 0.15);
+  --primary-glow-strong: rgba(0, 209, 200, 0.3);
+  --accent: #2B4EFF;
+  --accent-hover: #1F3BB3;
+  --gradient-brand: linear-gradient(135deg, #00D1C8, #2B4EFF);
 
   /* Backgrounds */
-  --bg-deep: #0B1623;
-  --bg-body: #0F1D2E;
-  --bg-card: #132238;
-  --bg-card-hover: #1A2D46;
-  --bg-surface: #1A2D46;
-  --bg-input: #162133;
-  --bg-modal: #101E30;
+  --bg-deep: #0C1220;
+  --bg-body: #101828;
+  --bg-card: #151F30;
+  --bg-card-hover: #1A2840;
+  --bg-surface: #1A2840;
+  --bg-input: #131B28;
+  --bg-modal: #0E1622;
 
   /* Text */
   --text: #FFFFFF;
   --text-secondary: #F1F5F9;
-  --text-muted: #CBD5E1;
-  --text-inverse: #0B1623;
+  --text-muted: #8899AA;
+  --text-inverse: #0C1220;
 
   /* Status */
   --success: #22C55E;
@@ -37,17 +40,17 @@
   --warning-bg: rgba(245, 158, 11, 0.12);
   --danger: #EF4444;
   --danger-bg: rgba(239, 68, 68, 0.12);
-  --info: #38BDF8;
-  --info-bg: rgba(56, 189, 248, 0.12);
+  --info: #00D1C8;
+  --info-bg: rgba(0, 209, 200, 0.12);
 
   /* Borders */
-  --border: rgba(56, 189, 248, 0.1);
-  --border-hover: rgba(56, 189, 248, 0.25);
-  --border-active: rgba(56, 189, 248, 0.5);
+  --border: rgba(0, 209, 200, 0.1);
+  --border-hover: rgba(0, 209, 200, 0.25);
+  --border-active: rgba(0, 209, 200, 0.5);
 
   /* Typography */
-  --font-brand: 'ITC Avant Garde Gothic', 'Avant Garde', 'Montserrat', sans-serif;
-  --font-body: 'Poppins', sans-serif;
+  --font-brand: 'Outfit', 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', 'Outfit', system-ui, sans-serif;
 
   /* Spacing */
   --space-xs: 4px;
@@ -68,7 +71,7 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 20px rgba(56, 189, 248, 0.15);
+  --shadow-glow: 0 0 20px rgba(0, 209, 200, 0.15);
 
   /* Transitions */
   --transition-fast: 150ms ease;

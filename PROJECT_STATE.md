@@ -1,4 +1,4 @@
-# Aquatech CRM - Estado Actual del Proyecto (Cloudflare 4)
+# Orbi CRM - Estado Actual del Proyecto (Cloudflare 4)
 
 **Última actualización:** 2024-05-04  
 **Propósito:** Este documento es el "Single Source of Truth" (SSoT). Su objetivo es evitar errores de sincronización y regresiones en bugs ya resueltos.
@@ -31,7 +31,7 @@
 ---
 
 ## 3. Configuración de BunnyCDN
-- **Storage Zone**: `aquatech-render`
+- **Storage Zone**: `orbi-render`
 - **Lógica de Purga**: Se emite orden de purga vía API tras cada actualización para limpiar la caché del CDN.
 
 ---

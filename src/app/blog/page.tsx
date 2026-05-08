@@ -6,7 +6,7 @@ import { BlogSearch } from '@/components/blog/BlogSearch';
 import { formatDateEcuador } from '@/lib/date-utils';
 
 export const metadata: Metadata = {
-  title: 'Blog | Aquatech',
+  title: 'Blog | Orbi',
   description: 'Aprende más sobre mantenimiento, innovación y tratamiento del agua.',
 };
 
@@ -48,8 +48,8 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
     <div style={{ backgroundColor: 'var(--bg-body)', minHeight: '100vh' }}>
       {/* Navbar simplificado */}
       <header style={{ padding: '1rem 5%', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <img src="/logo.jpg" alt="Aquatech" style={{ height: '40px', borderRadius: '4px' }} />
-        <Link href="/" style={{ color: 'var(--text)', fontWeight: 'bold', fontFamily: 'var(--font-brand)' }}>AQUATECH</Link>
+        <img src="/logo.jpg" alt="Orbi" style={{ height: '40px', borderRadius: '4px' }} />
+        <Link href="/" style={{ color: 'var(--text)', fontWeight: 'bold', fontFamily: 'var(--font-brand)' }}>ORBI</Link>
         <nav style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
           <Link href="/blog" style={{ color: 'var(--text)', textDecoration: 'none', fontSize: '0.9rem' }}>Artículos</Link>
           <Link href="/admin/login" className="btn btn-primary btn-sm">Portal CRM</Link>

@@ -9,8 +9,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Aquatech CRM — Innovación Hidráulica",
-  description: "Sistema de gestión y seguimiento de proyectos en campo para Aquatech Loja",
+  title: "ALL — Control Total, Alivio Real",
+  description: "Sistema de gestión integral para empresas de servicios. Proyectos, clientes, inventario y facturación.",
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.png",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Aquatech CRM",
+    title: "All CRM",
   },
   formatDetection: {
     telephone: false,

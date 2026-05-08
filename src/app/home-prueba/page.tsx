@@ -37,7 +37,7 @@ export default function HomeHeadersPruebaPage() {
         }
         
         .btn-cotizar {
-          background-color: #0070C0;
+          background-color: #00D1C8;
           color: white;
           padding: 10px 24px;
           border-radius: 6px;
@@ -90,7 +90,7 @@ export default function HomeHeadersPruebaPage() {
         }
         .dropdown-item:hover {
           background-color: #f0f9ff;
-          color: #0070C0;
+          color: #00D1C8;
           padding-left: 25px;
         }
         .dropdown-divider {
@@ -123,7 +123,7 @@ export default function HomeHeadersPruebaPage() {
         .nav-link-boutique:hover { color: white; }
 
         .top-bar {
-          background: #0070C0;
+          background: #00D1C8;
           color: white;
           padding: 8px 40px;
           display: flex;
@@ -147,7 +147,7 @@ export default function HomeHeadersPruebaPage() {
           backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           padding: '15px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10
         }}>
-          <Link href="/"><img src="/logo.jpg" alt="Aquatech" style={{ height: '45px', borderRadius: '4px' }} /></Link>
+          <Link href="/"><img src="/logo.jpg" alt="Orbi" style={{ height: '45px', borderRadius: '4px' }} /></Link>
 
           <nav style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
             <Link href="#" className="nav-link">Construcción</Link>
@@ -212,7 +212,7 @@ export default function HomeHeadersPruebaPage() {
 
           {/* Centro */}
           <Link href="#" style={{ display: 'flex', justifyContent: 'center' }}>
-             <img src="/logo.jpg" alt="Aquatech" style={{ height: '50px', borderRadius: '4px' }} />
+             <img src="/logo.jpg" alt="Orbi" style={{ height: '50px', borderRadius: '4px' }} />
           </Link>
 
           {/* Derecha */}
@@ -275,7 +275,7 @@ export default function HomeHeadersPruebaPage() {
           display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10,
           borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
         }}>
-          <Link href="/"><img src="/logo.jpg" alt="Aquatech" style={{ height: '40px', borderRadius: '4px' }} /></Link>
+          <Link href="/"><img src="/logo.jpg" alt="Orbi" style={{ height: '40px', borderRadius: '4px' }} /></Link>
 
           <nav style={{ display: 'flex', gap: '25px', alignItems: 'center' }}>
             <Link href="#" className="nav-link">Construcción</Link>

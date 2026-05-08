@@ -20,7 +20,7 @@ echo "📦 Conectando a VPS ($VPS_IP)..."
 
 # 1. Hacer dump en el VPS (solo lectura, no afecta nada)
 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$VPS_USER@$VPS_IP" \
-  "mysqldump --single-transaction --quick -u aquatech -p'Aquatech2026!Secure' aquatech > /tmp/prod_dump.sql && echo '✅ Dump creado en VPS'" || {
+  "mysqldump --single-transaction --quick -u all -p'All2026!Secure' all > /tmp/prod_dump.sql && echo '✅ Dump creado en VPS'" || {
   echo "❌ Error: No se pudo conectar al VPS. Verifica la IP y la clave SSH."
   exit 1
 }

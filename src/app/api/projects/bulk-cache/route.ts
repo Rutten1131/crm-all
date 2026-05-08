@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { deepSerialize } from '@/lib/serializable'
 
 export async function GET(request: Request) {
   try {
@@ -140,7 +141,7 @@ export async function GET(request: Request) {
     })
 
     // v280: Cache for 5 minutes in browser to avoid hammering the DB on every sync cycle
-    return NextResponse.json(projects, {
+    return NextResponse.json(deepSerialize(projects), {
       headers: {
         'Cache-Control': 'private, max-age=300, stale-while-revalidate=60',
       }

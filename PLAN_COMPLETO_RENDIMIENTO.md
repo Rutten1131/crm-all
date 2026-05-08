@@ -1,4 +1,4 @@
-# 📊 PLAN COMPLETO DE OPTIMIZACIÓN — Aquatech CRM
+# 📊 PLAN COMPLETO DE OPTIMIZACIÓN — Orbi CRM
 ## Auditoría Integral: VPS → MySQL → Caddy → Next.js → Frontend
 
 **Fecha:** 4 de Mayo 2026
@@ -41,7 +41,7 @@
 - Ubuntu 24.04.4 LTS, Kernel 6.8.0, 4-core AMD EPYC
 - 8GB RAM (solo 689MB usada), 145GB SSD
 - Sin SWAP, sin firewall (ufw), sin fail2ban
-- Docker corriendo 1 contenedor: `aquatech-crm-v2` (Next.js standalone)
+- Docker corriendo 1 contenedor: `orbi-crm-v2` (Next.js standalone)
 - Caddy v2.11.2 como proxy inverso (configuración mínima de 3 líneas)
 - **MySQL es REMOTO** — `mysql.gb.stackcp.com:39643` (hosting compartido)
 
@@ -257,8 +257,8 @@ Solo 3 líneas. Sin compresión, sin caché de estáticos, sin rate limiting.
 |------|--------|----------|
 | 3.1 | `apt install mysql-server-8.0` en VPS | `apt remove mysql-server` |
 | 3.2 | `mysqldump` del remoto → copiar al VPS → importar local | Volver DATABASE_URL al remoto |
-| 3.3 | Crear usuario `aquatech` en MySQL local con permisos | Borrar usuario |
-| 3.4 | Cambiar `DATABASE_URL` a `mysql://aquatech:password@localhost:3306/aquatech?connection_limit=30&pool_timeout=5` | Revertir env var |
+| 3.3 | Crear usuario `orbi` en MySQL local con permisos | Borrar usuario |
+| 3.4 | Cambiar `DATABASE_URL` a `mysql://orbi:password@localhost:3306/orbi?connection_limit=30&pool_timeout=5` | Revertir env var |
 | 3.5 | Configurar `innodb_buffer_pool_size=2G` en `/etc/mysql/my.cnf` | Revertir config |
 | 3.6 | Backup diario automático (cron: `mysqldump` a las 3am) | Borrar cron job |
 | 3.7 | Agregar índices: `chat_messages(createdAt)`, `projects(status, updatedAt)` | `DROP INDEX` |
@@ -329,7 +329,7 @@ Solo 3 líneas. Sin compresión, sin caché de estáticos, sin rate limiting.
 - ⚠️ **Fase 4.3 (migrar avatares):** Hacer backup de BD primero.
 
 ### ¿Impacto en otros sitios/servicios del VPS?
-**No hay otros servicios.** Solo corre Aquatech CRM en este VPS.
+**No hay otros servicios.** Solo corre Orbi CRM en este VPS.
 
 ---
 

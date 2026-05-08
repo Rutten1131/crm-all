@@ -13,7 +13,7 @@ async function test() {
         name: 'CONSUMIDOR FINAL',
         ruc: '9999999999999',
         phone: '0000000000',
-        email: 'ventas@aquatech.com',
+        email: 'ventas@orbi.com',
         city: 'LOJA',
         address: 'S/N',
         notes: 'Venta rápida / CF'

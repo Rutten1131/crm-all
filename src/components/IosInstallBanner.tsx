@@ -29,7 +29,7 @@ export function IosInstallBanner() {
     <div className="ios-banner">
       <div className="ios-banner-content">
         <div className="ios-banner-text">
-          <h4>📱 Instala Aquatech en tu iPhone</h4>
+          <h4>📱 Instala Orbi en tu iPhone</h4>
           <p>Para recibir notificaciones push en iOS, debes instalar la aplicación en tu pantalla de inicio.</p>
         </div>
         <div className="ios-banner-steps">

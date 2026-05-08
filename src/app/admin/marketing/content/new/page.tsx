@@ -75,7 +75,7 @@ export default function NewPipelinePage() {
               {LOADING_PHRASES[loadingStep]}
             </p>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '1rem' }}>
-              Preparando la estrategia perfecta para posicionar a Aquatech.
+              Preparando la estrategia perfecta para posicionar a Orbi.
             </p>
           </div>
         ) : (

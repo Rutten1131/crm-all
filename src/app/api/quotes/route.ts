@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { uploadToBunny } from '@/lib/bunny'
 import { notifyProjectTeam } from '@/lib/push'
+import { deepSerialize } from '@/lib/serializable'
 
 export async function GET(req: Request) {
   try {
@@ -30,7 +31,7 @@ export async function GET(req: Request) {
       },
       orderBy: { createdAt: 'desc' }
     })
-    return NextResponse.json(quotes)
+    return NextResponse.json(deepSerialize(quotes))
   } catch (error) {
     console.error('Error fetching quotes:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
@@ -171,7 +172,7 @@ export async function POST(req: Request) {
       return newQuote
     }, { timeout: 20000 })
     
-    return NextResponse.json(quote)
+    return NextResponse.json(deepSerialize(quote))
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: 'Error creating quote' }, { status: 500 })

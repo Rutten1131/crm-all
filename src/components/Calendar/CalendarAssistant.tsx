@@ -14,7 +14,7 @@ export default function CalendarAssistant() {
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: '¡Hola! Soy tu asistente de agenda Aquatech. ¿En qué puedo ayudarte hoy con la programación del equipo?' }
+    { role: 'assistant', content: '¡Hola! Soy tu asistente de agenda Orbi. ¿En qué puedo ayudarte hoy con la programación del equipo?' }
   ])
   const [isLoading, setIsLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
@@ -269,7 +269,7 @@ export default function CalendarAssistant() {
            <div className="chat-header">
               <div className="bot-status">
                  <div className="status-dot"></div>
-                 <span>Aquatech AI</span>
+                 <span>Orbi AI</span>
               </div>
               <button className="close-btn" onClick={() => setIsOpen(false)}>
                  <X size={20} />

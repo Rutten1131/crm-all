@@ -869,7 +869,7 @@ export default function OperatorDashboardClient({
         <div style={{
           background: pushStatus === 'denied' || pushStatus === 'unsupported' 
             ? 'rgba(255,255,255,0.05)' 
-            : 'linear-gradient(135deg, #0070c0, #38bdf8)',
+            : 'linear-gradient(135deg, #00D1C8, #00D1C8)',
           borderRadius: '16px',
           padding: '16px 20px',
           display: 'flex',
@@ -938,7 +938,7 @@ export default function OperatorDashboardClient({
                 disabled={isSubscribing}
                 style={{
                   backgroundColor: 'white',
-                  color: '#0070c0',
+                  color: '#00D1C8',
                   fontWeight: 'bold',
                   padding: '12px 24px',
                   borderRadius: '12px',
@@ -954,7 +954,7 @@ export default function OperatorDashboardClient({
               >
                 {isSubscribing ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className="animate-spin" style={{ width: '12px', height: '12px', border: '2px solid #0070c0', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
+                    <div className="animate-spin" style={{ width: '12px', height: '12px', border: '2px solid #00D1C8', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
                     <span>...</span>
                   </div>
                 ) : 'Activar'}

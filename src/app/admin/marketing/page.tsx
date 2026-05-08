@@ -38,7 +38,7 @@ export default function MarketingPage() {
             Generador Automático de Contenido (Pipeline SEO)
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', maxWidth: '700px', margin: '0 auto 2rem' }}>
-            Transforma una idea en una estrategia completa. Crea el <strong>Artículo Pilar</strong>, subtemas <strong>Clusters</strong>, y la grilla de publicaciones para <strong>Facebook e Instagram</strong> utilizando Inteligencia Artificial entrenada con el ADN de Aquatech.
+            Transforma una idea en una estrategia completa. Crea el <strong>Artículo Pilar</strong>, subtemas <strong>Clusters</strong>, y la grilla de publicaciones para <strong>Facebook e Instagram</strong> utilizando Inteligencia Artificial entrenada con el ADN de Orbi.
           </p>
           <button 
             className="btn btn-primary" 

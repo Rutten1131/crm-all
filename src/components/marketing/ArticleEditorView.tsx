@@ -3,7 +3,8 @@
 import React, { useState } from 'react'
 // Eliminamos react-markdown temporalmente para diagnóstico
 import { refineArticleAction, updateArticleContentAction, forcePipelineStatusAction } from '@/actions/marketing'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
+import { revalidateRoute } from '@/actions/revalidate'
 
 interface ArticleEditorViewProps {
   article: any
@@ -16,6 +17,7 @@ export default function ArticleEditorView({ article, pipelineId }: ArticleEditor
   const [isAsking, setIsAsking] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
 
   const handleSave = async () => {
     if (!article?.id) return { success: false, error: 'Artículo no identificado' }
@@ -28,13 +30,13 @@ export default function ArticleEditorView({ article, pipelineId }: ArticleEditor
   const handleFinish = async () => {
     setIsSaving(true)
     const res = await forcePipelineStatusAction(pipelineId, 'GENERATING_IMAGES')
-    if (res.success) router.refresh()
+    if (res.success) revalidateRoute(pathname)
     setIsSaving(false)
   }
 
   return (
     <div style={{ padding: '2rem', background: 'var(--card-bg)', borderRadius: '12px', border: '2px solid var(--primary-color)' }}>
-      <h2 style={{ color: 'var(--primary-color)' }}>🛠 Modo Diagnóstico: Editor de Aquatech</h2>
+      <h2 style={{ color: 'var(--primary-color)' }}>🛠 Modo Diagnóstico: Editor de Orbi</h2>
       <p style={{ color: 'var(--text-muted)' }}>Si ves esto, el problema era la librería react-markdown. El editor está cargado correctamente.</p>
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '1rem' }}>

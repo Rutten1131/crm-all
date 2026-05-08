@@ -1,4 +1,4 @@
-# 🧠 Memoria Permanente de Cline — Proyecto Aquatech
+# 🧠 Memoria Permanente de Cline — Proyecto Orbi
 
 > **Propósito:** Este archivo guarda el contexto completo del proyecto para que Cline retome sin perder información entre sesiones.
 > **Creado:** 4 de mayo de 2026
@@ -7,7 +7,7 @@
 
 ## 📋 Contexto del Proyecto
 
-**Cliente:** Aquatech
+**Cliente:** Orbi
 **Problemas reportados:**
 - Lentitud general
 - Footer no carga bien
@@ -109,7 +109,7 @@
 ## 📝 Plan de Auditoría (5 Fases)
 
 ### FASE 0 — Setup ✅ (Completado)
-- [x] Proyecto clonado localmente en `aquatech-render/`
+- [x] Proyecto clonado localmente en `orbi-render/`
 - [x] Skills instaladas en `.agents/skills/`
 - [x] The Architect clonado en `the-architect/`
 - [x] Carpetas de agentes innecesarias eliminadas (37 carpetas ocultas)
@@ -134,7 +134,7 @@
 
 **Estructura del Proyecto:**
 ```
-aquatech-render/
+orbi-render/
 ├── src/
 │   ├── app/           # App Router (público + admin)
 │   │   ├── admin/     # CRM: dashboard, projects, quotes, inventory, blog, marketing, calendar, team, reports, whatsapp
@@ -178,7 +178,7 @@ aquatech-render/
 
 | Paso | Acción | Detalle |
 |---|---|---|
-| **0** | Clon seguro | Clonar repo a `aquatech-render-dev/` para experimentar sin tocar producción |
+| **0** | Clon seguro | Clonar repo a `orbi-render-dev/` para experimentar sin tocar producción |
 | **1** | Trazas quirúrgicas | `console.log` con timestamps en: router.refresh, SW messages, outbox state changes |
 | **2** | Offline sin castigo | Siempre mostrar lo que haya: Dexie → servidor → "sin conexión". Precaching automático al abrir app. |
 | **3** | Listas rápidas | Revisar consultas N+1, serialización de datos pesados en listas de proyectos |
@@ -221,7 +221,7 @@ Siguiendo la recomendación de la comunidad:
 
 ```bash
 # Clonar repo del cliente
-git clone https://github.com/activaqrnegocio-crypto/aquatech-render.git
+git clone https://github.com/activaqrnegocio-crypto/orbi-render.git
 
 # Instalar Matt Pocock Skills
 npx skills@latest add mattpocock/skills

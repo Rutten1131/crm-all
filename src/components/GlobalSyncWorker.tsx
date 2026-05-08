@@ -38,6 +38,7 @@ export default function GlobalSyncWorker() {
   const [uploadProgress, setUploadProgress] = useState<any>(null);
   const syncLock = useRef(false)
   const outboxLock = useRef(false) // v272: Separate lock — outbox sync must NEVER be blocked by bulk sync
+  const outboxSyncingRef = useRef(false); // v374: Concurrency lock for syncOutbox
   
   // v261: PWA Visibility Fallback (Critical for iOS/Safari)
   // When app returns to foreground, proactively wake up the Service Worker sync
@@ -182,7 +183,7 @@ export default function GlobalSyncWorker() {
 
         
         const totalToSync = projectsToProcess.length
-        const syncChannel = new BroadcastChannel('aquatech-sync');
+        const syncChannel = new BroadcastChannel('orbi-sync');
         
         syncChannel.postMessage({ 
           type: 'DATA_SYNC_START', 
@@ -223,7 +224,7 @@ export default function GlobalSyncWorker() {
           
           setBulkProgress(prev => ({ ...prev, current: i + 1 }));
           
-          const syncChannel = new BroadcastChannel('aquatech-sync');
+          const syncChannel = new BroadcastChannel('orbi-sync');
           syncChannel.postMessage({ 
             type: 'DATA_SYNC_PROGRESS', 
             current: i + 1, 
@@ -334,7 +335,7 @@ export default function GlobalSyncWorker() {
               detail: { message: `Sincronizando activos de ${projectsForChunks.length} proyectos...` }
             }))
 
-            const chunkSyncChannel = new BroadcastChannel('aquatech-sync');
+            const chunkSyncChannel = new BroadcastChannel('orbi-sync');
             chunkSyncChannel.postMessage({ 
               type: 'ASSET_PRECACHE_PROGRESS', 
               current: 0, 
@@ -425,7 +426,7 @@ export default function GlobalSyncWorker() {
       
       await logSync('success', `Sincronización masiva completada: ${finalCount} proyectos`, 'bulk-sync');
 
-      const syncChannelFinal = new BroadcastChannel('aquatech-sync');
+      const syncChannelFinal = new BroadcastChannel('orbi-sync');
       syncChannelFinal.postMessage({ type: 'DATA_SYNC_FINISHED', count: finalCount });
       syncChannelFinal.close();
 
@@ -515,11 +516,17 @@ export default function GlobalSyncWorker() {
   }, [session])
   
   const syncOutbox = async () => {
-    if (typeof window === 'undefined' || !navigator.onLine || outboxLock.current) return
+    if (typeof window === 'undefined' || !navigator.onLine || outboxLock.current || outboxSyncingRef.current) return
     
-    // v365: Reset stuck 'syncing' items — only if they have lastAttemptAt (were actually claimed)
-    // Increased to 120s to allow large media uploads to complete
+    outboxSyncingRef.current = true;
     try {
+      // v374: Visibility-based throttling. PWA standard:
+      // If hidden, wait longer between items to save battery and main-thread CPU.
+      const isHidden = document.visibilityState === 'hidden';
+      const pacingDelay = isHidden ? 3000 : 1000;
+
+      // v365: Reset stuck 'syncing' items — only if they have lastAttemptAt (were actually claimed)
+      // Increased to 120s to allow large media uploads to complete
       const stuckItems = await db.outbox.where('status').equals('syncing').toArray();
       const now = Date.now();
       for (const item of stuckItems) {
@@ -1032,19 +1039,19 @@ export default function GlobalSyncWorker() {
              }
           }
           
-          // v365: Increased pacing delay to prevent connection saturation
-          await new Promise(r => setTimeout(r, 1000));
-       } catch (e) {
-          // v272: Mark context as failed so dependents are skipped
-          if (ctx) failedContexts.add(ctx);
-          await logSync('error', `✗ Excepción: ${item.type} #${item.id} — ${e instanceof Error ? e.message : 'Unknown'}`, item.type);
-          await db.outbox.update(item.id!, { 
-            status: 'pending',
-            attempts: (item.attempts || 0) + 1,
-            lastAttemptAt: Date.now()
-          })
-       }
-    }
+           // v365/v374: Use visibility-aware pacing delay
+           await new Promise(r => setTimeout(r, pacingDelay));
+        } catch (e) {
+           // v272: Mark context as failed so dependents are skipped
+           if (ctx) failedContexts.add(ctx);
+           await logSync('error', `✗ Excepción: ${item.type} #${item.id} — ${e instanceof Error ? e.message : 'Unknown'}`, item.type);
+           await db.outbox.update(item.id!, { 
+             status: 'pending',
+             attempts: (item.attempts || 0) + 1,
+             lastAttemptAt: Date.now()
+           })
+        }
+     }
 
     // v338: NO hacer router.refresh() aquí — causa recarga completa de página
     // en admin/proyectos y rompe la experiencia. En su lugar, emitimos un evento
@@ -1081,8 +1088,9 @@ export default function GlobalSyncWorker() {
     } catch (e) { /* ignore */ }
 
     } finally {
-      outboxLock.current = false
-      localStorage.removeItem('global_sync_lock')
+      outboxLock.current = false;
+      outboxSyncingRef.current = false;
+      localStorage.removeItem('global_sync_lock');
     }
   }
 

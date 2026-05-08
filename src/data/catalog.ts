@@ -18,7 +18,7 @@ export const catalogData: Product[] = [
     category: 'Hidromasajes',
     price: 2450.00,
     promoPrice: 2190.00,
-    img: "https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/model-duo.webp",
+    img: "https://cesarweb.b-cdn.net/Hidromasaje-Orbi/model-duo.webp",
     tags: ['BEST SELLER', 'IBAX TECH']
   },
   {
@@ -27,7 +27,7 @@ export const catalogData: Product[] = [
     code: "AQ-HID-MER",
     category: 'Hidromasajes',
     price: 3120.00,
-    img: "https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/model-merengue.webp",
+    img: "https://cesarweb.b-cdn.net/Hidromasaje-Orbi/model-merengue.webp",
     tags: ['NEW']
   },
   {
@@ -37,7 +37,7 @@ export const catalogData: Product[] = [
     category: 'Hidromasajes',
     price: 1890.00,
     promoPrice: 1750.00,
-    img: "https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/model-relax.webp"
+    img: "https://cesarweb.b-cdn.net/Hidromasaje-Orbi/model-relax.webp"
   },
   {
     id: 4,
@@ -45,7 +45,7 @@ export const catalogData: Product[] = [
     code: "AQ-HID-SWI",
     category: 'Hidromasajes',
     price: 8400.00,
-    img: "https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/model-swim.webp",
+    img: "https://cesarweb.b-cdn.net/Hidromasaje-Orbi/model-swim.webp",
     tags: ['EXCLUSIVE']
   },
   {
@@ -54,7 +54,7 @@ export const catalogData: Product[] = [
     code: "AQ-HID-SPA-T",
     category: 'Hidromasajes',
     price: 5900.00,
-    img: "https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/cat-spas.webp"
+    img: "https://cesarweb.b-cdn.net/Hidromasaje-Orbi/cat-spas.webp"
   },
   {
     id: 6,
@@ -62,7 +62,7 @@ export const catalogData: Product[] = [
     code: "AQ-HID-JAD",
     category: 'Hidromasajes',
     price: 1650.00,
-    img: "https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/cat-jacuzzis.webp"
+    img: "https://cesarweb.b-cdn.net/Hidromasaje-Orbi/cat-jacuzzis.webp"
   },
   {
     id: 7,
@@ -70,7 +70,7 @@ export const catalogData: Product[] = [
     code: "AQ-HID-ROM",
     category: 'Hidromasajes',
     price: 1100.00,
-    img: "https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/cat-tinas.webp"
+    img: "https://cesarweb.b-cdn.net/Hidromasaje-Orbi/cat-tinas.webp"
   },
   {
     id: 8,
@@ -78,7 +78,7 @@ export const catalogData: Product[] = [
     code: "AQ-HID-ZEN",
     category: 'Hidromasajes',
     price: 2800.00,
-    img: "https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/hero-hidromasaje.webp"
+    img: "https://cesarweb.b-cdn.net/Hidromasaje-Orbi/hero-hidromasaje.webp"
   },
   {
     id: 9,
@@ -94,7 +94,7 @@ export const catalogData: Product[] = [
     code: "AQ-HID-EXE",
     category: 'Hidromasajes',
     price: 3200.00,
-    img: "https://cesarweb.b-cdn.net/Hidromasaje-Aquatech/model-duo.webp"
+    img: "https://cesarweb.b-cdn.net/Hidromasaje-Orbi/model-duo.webp"
   },
   // TURCOS
   {
@@ -334,7 +334,7 @@ export const catalogData: Product[] = [
   },
   {
     id: 37,
-    name: "GENERADOR DE OZONO AQUATECH",
+    name: "GENERADOR DE OZONO ORBI",
     code: "AQ-AGU-OZO",
     category: 'Agua Potable',
     price: 320.00,

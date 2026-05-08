@@ -566,7 +566,7 @@ export default function ProjectCreationWizard({ panelBase = '/admin/proyectos' }
         
         // Disparar re-sync en background para bajar datos del servidor (fotos, etc.)
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('trigger-bulk-sync', { detail: { force: true } }));
+          window.dispatchEvent(new CustomEvent('trigger-bulk-sync', { detail: { force: false } }));
         }
       } catch (e) { /* no bloquear la UX si falla */ }
       
@@ -712,7 +712,7 @@ export default function ProjectCreationWizard({ panelBase = '/admin/proyectos' }
       docId: preview ? 'VISTA-PREVIA' : `PRJ-${Date.now().toString().slice(-4)}`,
       notes: projectData.technicalSpecs?.description || 'DOCUMENTO PRELIMINAR',
       action: preview ? 'preview' : 'save',
-      sellerName: session?.user?.name || 'Aquatech',
+      sellerName: session?.user?.name || 'Orbi',
     })
 
     if (preview && typeof result === 'string') {
@@ -878,7 +878,7 @@ export default function ProjectCreationWizard({ panelBase = '/admin/proyectos' }
 
                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                         <h4 style={{ margin: 0, color: 'var(--primary)' }}>Información del Cliente</h4>
-                        <button type="button" className="btn btn-ghost btn-xs" onClick={() => setClientData({ ...clientData, name: 'CONSUMIDOR FINAL', ruc: '9999999999999', phone: '0999999999', email: 'cf@aquatech.com.ec' })}>
+                        <button type="button" className="btn btn-ghost btn-xs" onClick={() => setClientData({ ...clientData, name: 'CONSUMIDOR FINAL', ruc: '9999999999999', phone: '0999999999', email: 'cf@orbi.com.ec' })}>
                            🚀 Consumidor Final
                         </button>
                      </div>

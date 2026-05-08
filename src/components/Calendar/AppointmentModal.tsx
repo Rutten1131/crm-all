@@ -465,9 +465,9 @@ export default function AppointmentModal({
               {/* Columna Izquierda: Identidad y Ubicación */}
               <div className="modal-column">
                 <div className="form-group-compact">
-                  <label className="form-label-aquatech">Título de la Actividad</label>
+                  <label className="form-label-orbi">Título de la Actividad</label>
                   <input 
-                    className="form-input-aquatech"
+                    className="form-input-orbi"
                     type="text"
                     required
                     readOnly={!isAdminView}
@@ -478,9 +478,9 @@ export default function AppointmentModal({
                 </div>
                 
                 <div className="form-group-compact">
-                  <label className="form-label-aquatech">Estado de la Tarea (Semáforo)</label>
+                  <label className="form-label-orbi">Estado de la Tarea (Semáforo)</label>
                   <select 
-                    className="form-select-aquatech"
+                    className="form-select-orbi"
                     style={{ 
                       backgroundColor: formData.status === 'COMPLETADA' ? 'rgba(37, 211, 102, 0.1)' : 
                                        formData.status === 'ATRASADA' ? 'rgba(239, 68, 68, 0.1)' : 
@@ -501,7 +501,7 @@ export default function AppointmentModal({
 
                 {isAdminView && (
                   <div className="form-group-compact">
-                    <label className="form-label-aquatech">Asignar Operadores</label>
+                    <label className="form-label-orbi">Asignar Operadores</label>
                     <div className="operator-dropdown-wrapper">
                       <div className="operator-dropdown-trigger" onClick={() => !isEditing && setIsDropdownOpen(!isDropdownOpen)}>
                         {selectedOperatorIds.length === 0 ? 'Seleccionar operador...' : `${selectedOperatorIds.length} seleccionados`}
@@ -525,9 +525,9 @@ export default function AppointmentModal({
                 )}
 
                 <div className="form-group-compact">
-                  <label className="form-label-aquatech">Proyecto Relacionado</label>
+                  <label className="form-label-orbi">Proyecto Relacionado</label>
                   <select 
-                    className="form-select-aquatech"
+                    className="form-select-orbi"
                     value={formData.projectId}
                     disabled={!isAdminView}
                     onChange={e => setFormData({...formData, projectId: e.target.value})}
@@ -539,16 +539,16 @@ export default function AppointmentModal({
                   </select>
                 </div>
 
-                <div className="location-row-aquatech">
+                <div className="location-row-orbi">
                   <div className="form-group-compact">
-                    <div className="label-with-action-aquatech">
-                      <label className="form-label-aquatech">👤 Cliente</label>
+                    <div className="label-with-action-orbi">
+                      <label className="form-label-orbi">👤 Cliente</label>
                       {formData.clientPhone && (
                         <a 
                           href={`https://wa.me/${formData.clientPhone.replace(/\D/g, '')}`} 
                           target="_blank" 
                           rel="noreferrer"
-                          className="btn-voice-aquatech"
+                          className="btn-voice-orbi"
                           style={{ background: 'rgba(37, 211, 102, 0.1)', borderColor: 'rgba(37, 211, 102, 0.3)', color: '#25D366' }}
                         >
                           WhatsApp
@@ -556,7 +556,7 @@ export default function AppointmentModal({
                       )}
                     </div>
                     <input
-                      className="form-input-aquatech"
+                      className="form-input-orbi"
                       type="text"
                       readOnly={!isAdminView}
                       placeholder="Nombre del cliente"
@@ -566,9 +566,9 @@ export default function AppointmentModal({
                   </div>
                   
                   <div className="form-group-compact">
-                    <label className="form-label-aquatech">📞 Contacto</label>
+                    <label className="form-label-orbi">📞 Contacto</label>
                     <input
-                      className="form-input-aquatech"
+                      className="form-input-orbi"
                       type="text"
                       readOnly={!isAdminView}
                       placeholder="Número de teléfono"
@@ -578,21 +578,21 @@ export default function AppointmentModal({
                   </div>
 
                   <div className="form-group-compact" style={{ gridColumn: '1 / -1' }}>
-                    <div className="label-with-action-aquatech">
-                      <label className="form-label-aquatech">📍 Ubicación Cliente</label>
+                    <div className="label-with-action-orbi">
+                      <label className="form-label-orbi">📍 Ubicación Cliente</label>
                       {formData.clientLocation && (
                         <a 
                           href={formData.clientLocation.startsWith('http') ? formData.clientLocation : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.clientLocation)}`} 
                           target="_blank" 
                           rel="noreferrer"
-                          className="btn-voice-aquatech"
+                          className="btn-voice-orbi"
                         >
                           Abrir GPS
                         </a>
                       )}
                     </div>
                     <input
-                      className="form-input-aquatech"
+                      className="form-input-orbi"
                       type="text"
                       readOnly={!isAdminView}
                       placeholder="Pega el link de Google Maps del cliente aquí..."
@@ -602,12 +602,12 @@ export default function AppointmentModal({
                   </div>
 
                   <div className="form-group-compact" style={{ gridColumn: '1 / -1' }}>
-                    <div className="label-with-action-aquatech">
-                      <label className="form-label-aquatech">📡 Ubicación Operario (GPS)</label>
+                    <div className="label-with-action-orbi">
+                      <label className="form-label-orbi">📡 Ubicación Operario (GPS)</label>
                       {isAdminView && (
                         <button 
                           type="button"
-                          className="btn-voice-aquatech"
+                          className="btn-voice-orbi"
                           style={{ background: 'rgba(88, 199, 255, 0.2)', borderColor: '#58c7ff' }}
                           onClick={handleGetGPS}
                         >
@@ -616,7 +616,7 @@ export default function AppointmentModal({
                       )}
                     </div>
                     <input
-                      className="form-input-aquatech"
+                      className="form-input-orbi"
                       type="text"
                       readOnly={!isAdminView}
                       placeholder="Link de ubicación del operario..."
@@ -629,7 +629,7 @@ export default function AppointmentModal({
                     <div className="form-group-compact" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
                        <button 
                          type="button"
-                         className="btn-attach-aquatech"
+                         className="btn-attach-orbi"
                          style={{ width: '100%', background: 'rgba(88, 199, 255, 0.15)', borderColor: '#58c7ff' }}
                          onClick={() => {
                            const path = isAdminView ? `/admin/proyectos/${formData.projectId}` : `/operador/ficha/${formData.projectId}`;
@@ -647,11 +647,11 @@ export default function AppointmentModal({
 
               {/* Columna Derecha: Tiempo, Multimedia y Notas */}
               <div className="modal-column">
-                <div className="time-row-aquatech">
+                <div className="time-row-orbi">
                   <div className="form-group-compact">
-                    <label className="form-label-aquatech">Horario Inicio</label>
+                    <label className="form-label-orbi">Horario Inicio</label>
                     <input 
-                      className="form-input-aquatech"
+                      className="form-input-orbi"
                       type="datetime-local"
                       required
                       readOnly={!isAdminView}
@@ -660,9 +660,9 @@ export default function AppointmentModal({
                     />
                   </div>
                   <div className="form-group-compact">
-                    <label className="form-label-aquatech">Horario Fin</label>
+                    <label className="form-label-orbi">Horario Fin</label>
                     <input 
-                      className="form-input-aquatech"
+                      className="form-input-orbi"
                       type="datetime-local"
                       required
                       readOnly={!isAdminView}
@@ -673,12 +673,12 @@ export default function AppointmentModal({
                 </div>
 
                 <div className="form-group-compact">
-                  <label className="form-label-aquatech">📸 Adjuntos (Max 5MB)</label>
+                  <label className="form-label-orbi">📸 Adjuntos (Max 5MB)</label>
                   {isAdminView && (
                     <div className="attachment-actions-row">
                       <button 
                         type="button" 
-                      className="btn-attach-aquatech"
+                      className="btn-attach-orbi"
                       onClick={() => {
                         const input = document.createElement('input')
                         input.type = 'file'
@@ -705,7 +705,7 @@ export default function AppointmentModal({
                     </button>
                     <button 
                       type="button" 
-                      className="btn-attach-aquatech"
+                      className="btn-attach-orbi"
                       onClick={() => {
                         const input = document.createElement('input')
                         input.type = 'file'
@@ -732,7 +732,7 @@ export default function AppointmentModal({
                     </button>
                     <button 
                       type="button" 
-                      className="btn-attach-aquatech"
+                      className="btn-attach-orbi"
                       onClick={() => document.getElementById('file-input-gallery')?.click()}
                     >
                       📁 Archivos
@@ -754,7 +754,7 @@ export default function AppointmentModal({
                       <strong style={{ fontSize: '0.75rem', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>MULTIMEDIA CARGADA</strong>
                     </div>
                     
-                    <div className="preview-gallery-aquatech" style={{ 
+                    <div className="preview-gallery-orbi" style={{ 
                       minHeight: '60px', 
                       background: 'rgba(255,255,255,0.02)', 
                       borderRadius: '10px', 
@@ -777,7 +777,7 @@ export default function AppointmentModal({
                           return (
                             <div 
                               key={idx} 
-                              className="preview-item-aquatech"
+                              className="preview-item-orbi"
                               style={{ 
                                 cursor: 'pointer',
                                 width: '90px',
@@ -792,7 +792,7 @@ export default function AppointmentModal({
                               }}
                               onClick={() => setSelectedMedia(file)}
                             >
-                              <div className="preview-content-aquatech" style={{ width: '100%', height: '100%' }}>
+                              <div className="preview-content-orbi" style={{ width: '100%', height: '100%' }}>
                                 {isImage ? (
                                   <img 
                                     src={file.url || file.data} 
@@ -899,11 +899,11 @@ export default function AppointmentModal({
                 </div>
 
                 <div className="form-group-compact">
-                  <div className="label-with-action-aquatech">
-                    <label className="form-label-aquatech">📝 Notas / Instrucciones</label>
+                  <div className="label-with-action-orbi">
+                    <label className="form-label-orbi">📝 Notas / Instrucciones</label>
                     <button 
                       type="button" 
-                      className={`btn-voice-aquatech ${isRecording ? 'recording' : ''}`}
+                      className={`btn-voice-orbi ${isRecording ? 'recording' : ''}`}
                       onClick={toggleSpeechToText}
                       title={isRecording ? 'Detener dictado' : 'Dictar notas'}
                     >
@@ -911,7 +911,7 @@ export default function AppointmentModal({
                     </button>
                   </div>
                   <textarea 
-                    className="form-textarea-aquatech"
+                    className="form-textarea-orbi"
                     readOnly={!isAdminView}
                     value={formData.description}
                     onChange={e => setFormData({...formData, description: e.target.value})}
@@ -1027,7 +1027,7 @@ export default function AppointmentModal({
           gap: 8px;
         }
 
-        .form-label-aquatech {
+        .form-label-orbi {
           color: #58c7ff; /* Celeste brillante exacto */
           font-size: 0.75rem;
           font-weight: 700;
@@ -1035,7 +1035,7 @@ export default function AppointmentModal({
           letter-spacing: 0.8px;
         }
 
-        .form-input-aquatech, .form-select-aquatech, .form-textarea-aquatech, .operator-dropdown-trigger {
+        .form-input-orbi, .form-select-orbi, .form-textarea-orbi, .operator-dropdown-trigger {
           background: rgba(255,255,255,0.03); /* Fondo más suave como en el calendario */
           border: 1px solid rgba(255,255,255,0.1);
           border-radius: 8px;
@@ -1047,7 +1047,7 @@ export default function AppointmentModal({
           appearance: none; /* Eliminar estilo nativo para mayor control */
         }
 
-        .form-select-aquatech {
+        .form-select-orbi {
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
           background-repeat: no-repeat;
           background-position: right 12px center;
@@ -1055,30 +1055,30 @@ export default function AppointmentModal({
           padding-right: 40px;
         }
 
-        .form-select-aquatech option {
+        .form-select-orbi option {
           background-color: #010816; /* Forzar fondo oscuro en las opciones */
           color: white;
         }
 
-        .form-input-aquatech:focus, .form-select-aquatech:focus {
+        .form-input-orbi:focus, .form-select-orbi:focus {
           border-color: #58c7ff;
           background: rgba(255,255,255,0.05);
         }
 
-        .form-textarea-aquatech {
+        .form-textarea-orbi {
           height: 80px;
           resize: none;
           overflow-y: auto;
         }
 
-        .label-with-action-aquatech {
+        .label-with-action-orbi {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 4px;
         }
 
-        .btn-voice-aquatech {
+        .btn-voice-orbi {
           background: rgba(88, 199, 255, 0.1);
           border: 1px solid rgba(88, 199, 255, 0.3);
           color: #58c7ff;
@@ -1093,7 +1093,7 @@ export default function AppointmentModal({
           transition: all 0.2s;
         }
 
-        .btn-voice-aquatech.recording {
+        .btn-voice-orbi.recording {
           background: rgba(255, 0, 0, 0.2);
           border-color: rgba(255, 0, 0, 0.5);
           color: #ff4d4d;
@@ -1106,7 +1106,7 @@ export default function AppointmentModal({
           100% { transform: scale(1); }
         }
 
-        .location-row-aquatech {
+        .location-row-orbi {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 10px;
@@ -1118,7 +1118,7 @@ export default function AppointmentModal({
           box-sizing: border-box;
         }
 
-        .btn-gps-aquatech {
+        .btn-gps-orbi {
           background: transparent;
           border: 1px solid #58c7ff;
           color: white;
@@ -1130,13 +1130,13 @@ export default function AppointmentModal({
           min-height: 45px;
         }
 
-        .time-row-aquatech {
+        .time-row-orbi {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 16px;
         }
 
-        .upload-zone-aquatech {
+        .upload-zone-orbi {
           border: 1px dashed rgba(255,255,255,0.2);
           padding: 12px;
           border-radius: 10px;
@@ -1148,14 +1148,14 @@ export default function AppointmentModal({
           justify-content: center;
           transition: all 0.2s;
         }
-        .upload-zone-aquatech:hover { background: rgba(255,255,255,0.02); border-color: #58c7ff; }
+        .upload-zone-orbi:hover { background: rgba(255,255,255,0.02); border-color: #58c7ff; }
 
         .attachment-actions-row {
           display: flex;
           gap: 10px;
         }
 
-        .btn-attach-aquatech {
+        .btn-attach-orbi {
           flex: 1;
           background: rgba(88, 199, 255, 0.08);
           border: 1px solid rgba(88, 199, 255, 0.25);
@@ -1172,19 +1172,19 @@ export default function AppointmentModal({
           gap: 6px;
         }
 
-        .btn-attach-aquatech:hover {
+        .btn-attach-orbi:hover {
           background: rgba(88, 199, 255, 0.15);
           border-color: #58c7ff;
         }
 
-        .preview-gallery-aquatech {
+        .preview-gallery-orbi {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
           width: 100%;
         }
 
-        .preview-item-aquatech {
+        .preview-item-orbi {
           width: 50px;
           height: 50px;
           border-radius: 6px;
@@ -1194,13 +1194,13 @@ export default function AppointmentModal({
           border: 1px solid rgba(255,255,255,0.1);
         }
 
-        .preview-item-aquatech img {
+        .preview-item-orbi img {
           width: 100%;
           height: 100%;
           object-fit: cover;
         }
 
-        .preview-icon-aquatech {
+        .preview-icon-orbi {
           width: 100%;
           height: 100%;
           display: flex;
@@ -1324,32 +1324,32 @@ export default function AppointmentModal({
             width: 100%;
           }
           .form-group-compact { gap: 4px; width: 100%; }
-          .form-label-aquatech { font-size: 0.7rem; }
-          .form-input-aquatech, .form-select-aquatech, .operator-dropdown-trigger { 
+          .form-label-orbi { font-size: 0.7rem; }
+          .form-input-orbi, .form-select-orbi, .operator-dropdown-trigger { 
             padding: 10px 12px; 
             font-size: 0.9rem; 
             width: 100%;
           }
-          .location-row-aquatech { 
+          .location-row-orbi { 
             grid-template-columns: 1fr; /* Una sola columna para evitar cortes horizontales */
             gap: 12px; 
             padding: 12px; 
           }
-          .btn-gps-aquatech { 
+          .btn-gps-orbi { 
             width: 100%;
             min-height: 44px; 
             padding: 10px; 
             font-size: 0.9rem; 
           }
-          .time-row-aquatech { 
+          .time-row-orbi { 
             grid-template-columns: 1fr; 
             gap: 12px; 
           }
-          .upload-zone-aquatech { 
+          .upload-zone-orbi { 
             padding: 12px; 
             min-height: 100px;
           }
-          .form-textarea-aquatech { min-height: 80px; }
+          .form-textarea-orbi { min-height: 80px; }
           .modal-footer { 
             position: relative; 
             padding: 16px;

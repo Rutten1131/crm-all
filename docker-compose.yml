@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   app:
-    image: ghcr.io/activaqrnegocio-crypto/aquatech-render:latest
-    container_name: aquatech-crm-v2
+    image: ghcr.io/activaqrnegocio-crypto/all-render:latest
+    container_name: all-crm-v2
     restart: always
     network_mode: host
     env_file:

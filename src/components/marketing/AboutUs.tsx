@@ -1,146 +1,83 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { ShieldCheck, Zap, Heart, MapPin } from 'lucide-react'
+import { ShieldCheck, Zap, Heart, LayoutDashboard } from 'lucide-react'
 
 export default function AboutUs() {
   return (
     <section 
       id="nosotros"
-      style={{ 
-        backgroundColor: '#FFFFFF', 
-        paddingTop: '80px', 
-        paddingBottom: '80px',
-        position: 'relative',
-        overflow: 'hidden'
-      }}
+      className="bg-white py-20 lg:py-32 relative overflow-hidden"
     >
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-          gap: '60px',
-          alignItems: 'center'
-        }}>
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
           
-          {/* Left Column: Image Collage (Square Style) */}
-          <div style={{ 
-            position: 'relative', 
-            height: '600px', 
-            width: '100%',
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center' 
-          }}>
+          {/* Left Column: Image Collage (Premium CRM Style) */}
+          <div className="relative h-[500px] lg:h-[650px] w-full flex items-center justify-center">
             
-            {/* Image 4: Sucursal 3 (Top Right - Background) */}
+            {/* Image 4: Analytics (Top Right - Background) */}
             <motion.div
               initial={{ opacity: 0, x: 40, y: -40, rotate: 8 }}
               whileInView={{ opacity: 1, x: 0, y: 0, rotate: 8 }}
               viewport={{ once: true }}
               transition={{ duration: 1 }}
-              style={{
-                position: 'absolute',
-                top: '5%',
-                right: '5%',
-                width: '45%',
-                height: '180px',
-                borderRadius: '0px', // Square
-                overflow: 'hidden',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-                zIndex: 1,
-                border: '4px solid white',
-                filter: 'brightness(0.95)',
-                backgroundColor: '#F9FAFB'
-              }}
+              className="absolute top-[5%] right-[5%] w-[45%] h-[180px] lg:h-[220px] bg-[#F9FAFB] shadow-2xl z-1 border-4 border-white"
             >
-              <img src="https://cesarweb.b-cdn.net/home/showroom_interior.webp" alt="Showroom Interior" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+              <img 
+                src="https://images.unsplash.com/photo-1551288049-bbda48642150?auto=format&fit=crop&q=80&w=600" 
+                alt="CRM Analytics" 
+                className="w-full h-full object-cover" 
+              />
             </motion.div>
 
-            {/* Image 1: Matriz (Top Left) */}
+            {/* Image 1: Main Dashboard (Top Left) */}
             <motion.div
               initial={{ opacity: 0, x: -60, y: -30, rotate: -6 }}
               whileInView={{ opacity: 1, x: 0, y: 0, rotate: -6 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
-              style={{
-                position: 'absolute',
-                top: '10%',
-                left: '2%',
-                width: '55%',
-                height: '240px',
-                borderRadius: '0px', // Square
-                overflow: 'hidden',
-                boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
-                zIndex: 2,
-                border: '4px solid white',
-                backgroundColor: '#F3F4F6'
-              }}
+              className="absolute top-[10%] left-[2%] w-[55%] h-[240px] lg:h-[300px] bg-[#F3F4F6] shadow-[0_25px_50px_rgba(0,0,0,0.15)] z-2 border-4 border-white"
             >
-              <img src="https://cesarweb.b-cdn.net/home/matriz_frente.webp" alt="Matriz Loja" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+              <img 
+                src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800" 
+                alt="ALL Dashboard" 
+                className="w-full h-full object-cover" 
+              />
             </motion.div>
 
-            {/* Image 2: Sucursal 1 (Bottom Left) */}
+            {/* Image 2: Team Collaboration (Bottom Left) */}
             <motion.div
               initial={{ opacity: 0, x: -40, y: 60, rotate: 4 }}
               whileInView={{ opacity: 1, x: 0, y: 0, rotate: 4 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              style={{
-                position: 'absolute',
-                bottom: '8%',
-                left: '5%',
-                width: '50%',
-                height: '200px',
-                borderRadius: '0px', // Square
-                overflow: 'hidden',
-                boxShadow: '0 20px 45px rgba(0,0,0,0.12)',
-                zIndex: 3,
-                border: '4px solid white',
-                backgroundColor: '#E5E7EB'
-              }}
+              className="absolute bottom-[8%] left-[5%] w-[50%] h-[200px] lg:h-[250px] bg-[#E5E7EB] shadow-[0_20px_45px_rgba(0,0,0,0.12)] z-3 border-4 border-white"
             >
-              <img src="https://cesarweb.b-cdn.net/home/equipo_trabajo.webp" alt="Equipo de Trabajo" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+              <img 
+                src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=600" 
+                alt="Equipo ALL CRM" 
+                className="w-full h-full object-cover" 
+              />
             </motion.div>
 
-            {/* Image 3: Sucursal 2 (Center Right - Foreground) */}
+            {/* Image 3: Mobile Experience (Center Right - Foreground) */}
             <motion.div
               initial={{ opacity: 0, x: 70, y: 40, rotate: -4 }}
               whileInView={{ opacity: 1, x: 0, y: 0, rotate: -4 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              style={{
-                position: 'absolute',
-                bottom: '15%',
-                right: '2%',
-                width: '58%',
-                height: '260px',
-                borderRadius: '0px', // Square
-                overflow: 'hidden',
-                boxShadow: '0 30px 60px rgba(0,0,0,0.2)',
-                zIndex: 4,
-                border: '4px solid white',
-                backgroundColor: '#D1D5DB'
-              }}
+              className="absolute bottom-[15%] right-[2%] w-[58%] h-[260px] lg:h-[320px] bg-[#D1D5DB] shadow-[0_30px_60px_rgba(0,0,0,0.2)] z-4 border-4 border-white"
             >
-              <img src="https://cesarweb.b-cdn.net/home/detalle_ingenieria.webp" alt="Detalle Ingeniería" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+              <img 
+                src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&q=80&w=600" 
+                alt="ALL CRM Mobile" 
+                className="w-full h-full object-cover" 
+              />
               
-              {/* Review Badge (Square) */}
-              <div style={{
-                position: 'absolute',
-                bottom: '24px',
-                right: '24px',
-                backgroundColor: '#004A87',
-                color: 'white',
-                padding: '12px 24px',
-                borderRadius: '0px', // Square
-                textAlign: 'center',
-                boxShadow: '0 10px 25px rgba(0,74,135,0.4)',
-                zIndex: 10,
-                border: '1px solid rgba(255,255,255,0.2)'
-              }}>
-                <div style={{ fontSize: '20px', fontWeight: '900', lineHeight: 1 }}>5/5</div>
-                <div style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.08em', marginTop: '4px' }}>Valoración Real</div>
+              {/* Trust Badge */}
+              <div className="absolute bottom-6 right-6 bg-[#2B4EFF] text-white p-4 lg:p-6 shadow-[0_10px_25px_rgba(43,78,255,0.4)] z-10 border border-white/20">
+                <div className="text-xl lg:text-2xl font-black leading-none">99.9%</div>
+                <div className="text-[10px] uppercase font-bold tracking-widest mt-1">Uptime Real</div>
               </div>
             </motion.div>
           </div>
@@ -152,73 +89,47 @@ export default function AboutUs() {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-               <div style={{ width: '32px', height: '2px', backgroundColor: '#004A87' }} />
-               <span className="font-brand" style={{ fontSize: '12px', fontWeight: '900', color: '#004A87', textTransform: 'uppercase', letterSpacing: '0.4em' }}>
-                  Nuestra Trayectoria
+            <div className="flex items-center gap-3 mb-6">
+               <div className="w-8 h-[2px] bg-[#2B4EFF]" />
+               <span className="text-[12px] font-black text-[#2B4EFF] uppercase tracking-[0.4em]">
+                  El Futuro de la Gestión
                </span>
             </div>
             
-            <h2 className="font-brand" style={{ 
-              fontSize: 'clamp(32px, 4vw, 56px)', 
-              fontWeight: '900', 
-              color: '#0B1623', 
-              lineHeight: '1.1', 
-              letterSpacing: '-0.03em', 
-              marginBottom: '32px' 
-            }}>
-              Líderes en el ciclo <br />
-              <span style={{ color: '#004A87' }}>integral del agua.</span>
+            <h2 className="text-4xl lg:text-6xl font-black text-[#1A1F3C] leading-[1.1] tracking-tightest mb-8">
+              Control Total <br />
+              <span className="text-[#2B4EFF]">en un solo lugar.</span>
             </h2>
             
-            <p style={{ 
-              fontSize: '18px', 
-              color: '#4B5563', 
-              lineHeight: '1.7', 
-              marginBottom: '40px',
-              maxWidth: '540px'
-            }}>
-              Con más de una década de experiencia, en Aquatech hemos perfeccionado el arte de llevar el paraíso a tu hogar. Nuestra infraestructura robusta con matriz y sucursales estratégicas nos permite ofrecer un respaldo único en el país.
+            <p className="text-lg text-gray-500 leading-relaxed mb-10 max-w-[540px]">
+              En ALL CRM, hemos transformado la complejidad empresarial en una experiencia intuitiva y potente. Nuestra plataforma no solo organiza tus datos, sino que impulsa el crecimiento de tu negocio con tecnología de vanguardia.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '48px' }}>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <div style={{ color: '#004A87' }}><ShieldCheck size={24} /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
+              <div className="flex gap-4">
+                <div className="text-[#2B4EFF] shrink-0"><ShieldCheck size={28} /></div>
                 <div>
-                  <h4 style={{ fontWeight: '800', color: '#111827', fontSize: '15px' }}>Garantía Real</h4>
-                  <p style={{ fontSize: '13px', color: '#6B7280' }}>Soporte técnico directo sin intermediarios.</p>
+                  <h4 className="font-extrabold text-[#111827] text-base">Seguridad Bancaria</h4>
+                  <p className="text-sm text-gray-400">Tus datos protegidos con los más altos estándares.</p>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <div style={{ color: '#004A87' }}><Zap size={24} /></div>
+              <div className="flex gap-4">
+                <div className="text-[#2B4EFF] shrink-0"><Zap size={28} /></div>
                 <div>
-                  <h4 style={{ fontWeight: '800', color: '#111827', fontSize: '15px' }}>Eficiencia Alemana</h4>
-                  <p style={{ fontSize: '13px', color: '#6B7280' }}>Equipos de alta gama con máxima durabilidad.</p>
+                  <h4 className="font-extrabold text-[#111827] text-base">Agilidad Extrema</h4>
+                  <p className="text-sm text-gray-400">Interfaz optimizada para máxima productividad.</p>
                 </div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div className="flex gap-4 flex-wrap items-center">
               <button 
-                style={{
-                  backgroundColor: '#000000',
-                  color: 'white',
-                  padding: '18px 36px',
-                  borderRadius: '0px', // Square
-                  fontSize: '13px',
-                  fontWeight: '900',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                className="hover:scale-105 hover:bg-[#004A87] shadow-lg"
+                className="bg-black text-white px-8 lg:px-10 py-5 text-[13px] font-black uppercase tracking-widest hover:bg-[#2B4EFF] transition-all duration-300 shadow-xl"
               >
-                Conocer Historia
+                Solicitar Demo
               </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#004A87', fontWeight: '800', fontSize: '14px', cursor: 'pointer' }}>
-                Ver ubicaciones <MapPin size={18} />
+              <div className="flex items-center gap-2 text-[#2B4EFF] font-black text-sm cursor-pointer hover:underline">
+                Explorar Dashboard <LayoutDashboard size={18} />
               </div>
             </div>
           </motion.div>
@@ -228,3 +139,4 @@ export default function AboutUs() {
     </section>
   )
 }
+

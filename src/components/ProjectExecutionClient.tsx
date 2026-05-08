@@ -227,13 +227,19 @@ export default function ProjectExecutionClient({
       }
     }
     
-    // v365: Debounce to prevent rapid-fire fetches during batch sync
-    let syncSuccessTimer: NodeJS.Timeout | null = null;
+    // v374: Debounce revalidateRoute to prevent rapid-fire refreshes during batch sync.
+    // Instead of revalidating on every 'sync-success', we listen for 'outbox-items-synced'
+    // which GlobalSyncWorker dispatches once after processing the whole batch.
+    const handleBatchSyncFinished = () => {
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        startTransition(() => {
+          revalidateRoute(pathname);
+        });
+      }
+    };
+
     const handleSyncSuccess = (e: any) => {
       if (e.detail?.projectId === idFromUrl) {
-        // Revalidate server cache without full page reload
-        startTransition(() => { revalidateRoute(pathname) })
-        
         // Debounced full chat refresh to catch offline messages
         if (e.detail?.type === 'MESSAGE' || e.detail?.type === 'MEDIA_UPLOAD') {
           if (syncSuccessTimer) clearTimeout(syncSuccessTimer);
@@ -269,6 +275,7 @@ export default function ProjectExecutionClient({
     window.addEventListener('online', updateOnlineStatus)
     window.addEventListener('offline', updateOnlineStatus)
     window.addEventListener('sync-success', handleSyncSuccess)
+    window.addEventListener('outbox-items-synced', handleBatchSyncFinished)
     updateOnlineStatus()
 
     // v281: Deep Link - Auto-switch tab based on query param
@@ -284,6 +291,8 @@ export default function ProjectExecutionClient({
       window.removeEventListener('online', updateOnlineStatus)
       window.removeEventListener('offline', updateOnlineStatus)
       window.removeEventListener('sync-success', handleSyncSuccess)
+      window.removeEventListener('outbox-items-synced', handleBatchSyncFinished)
+      if (syncSuccessTimer) clearTimeout(syncSuccessTimer)
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.removeEventListener('message', handleSWMessage);
       }
@@ -1298,10 +1307,12 @@ export default function ProjectExecutionClient({
       if (freshMsgs.length > 0) {
         setLiveChat(freshMsgs) // Complete replacement
       }
-      // 2. Also refresh server component props
+      // 2. Also refresh server component props using lightweight revalidation
       if (typeof navigator !== 'undefined' && navigator.onLine) {
-       router.refresh()
-     }
+        startTransition(() => {
+          revalidateRoute(pathname);
+        });
+      }
     } catch (e) {
       console.error('[MANUAL SYNC] Error:', e)
     } finally {
@@ -1928,7 +1939,7 @@ export default function ProjectExecutionClient({
       doc.setTextColor(56, 189, 248)
       doc.setFontSize(10)
       doc.setFont('helvetica', 'bold')
-      doc.text('AQUATECH S.A.', 20, 18)
+      doc.text('ORBI S.A.', 20, 18)
       
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(24)
@@ -2071,7 +2082,7 @@ export default function ProjectExecutionClient({
         doc.setPage(i)
         doc.setFontSize(8)
         doc.setTextColor(160, 160, 160)
-        doc.text(`Aquatech CRM — Ficha Técnica #${fullProject.id}`, 20, 287)
+        doc.text(`Orbi CRM — Ficha Técnica #${fullProject.id}`, 20, 287)
         doc.text(`Página ${i} de ${pageCount}`, 175, 287)
       }
 
@@ -2500,7 +2511,7 @@ export default function ProjectExecutionClient({
         )}
 
         {[
-          { id: 'records', label: 'Registros', activeColor: 'var(--primary)', bgColor: 'rgba(0, 112, 192, 0.2)', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>, gradient: 'linear-gradient(135deg, #0070c0, #38bdf8)' },
+          { id: 'records', label: 'Registros', activeColor: 'var(--primary)', bgColor: 'rgba(0, 112, 192, 0.2)', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>, gradient: 'linear-gradient(135deg, #00D1C8, #00D1C8)' },
           { id: 'chat', label: 'Chat', activeColor: '#25D366', bgColor: 'rgba(37, 211, 102, 0.2)', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>, gradient: 'linear-gradient(135deg, #128C7E, #25D366)' }
         ].map(tab => (
           <button

@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { NextResponse } from 'next/server'
+import { deepSerialize } from '@/lib/serializable'
 
 export async function GET() {
   try {
@@ -48,7 +49,7 @@ export async function GET() {
       return { ...project, unreadCount }
     }))
 
-    return NextResponse.json(projectsWithUnread)
+    return NextResponse.json(deepSerialize(projectsWithUnread))
   } catch (error) {
     console.error('[API Operator Projects]:', error)
     return NextResponse.json({ error: 'Error fetching projects' }, { status: 500 })

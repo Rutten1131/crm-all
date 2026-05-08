@@ -9,7 +9,7 @@ const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY
 if (VAPID_PUBLIC && VAPID_PRIVATE) {
   try {
     webpush.setVapidDetails(
-      process.env.VAPID_SUBJECT || 'mailto:aquatech@cesarreyesjaramillo.com',
+      process.env.VAPID_SUBJECT || 'mailto:orbi@cesarreyesjaramillo.com',
       VAPID_PUBLIC,
       VAPID_PRIVATE
     )

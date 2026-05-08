@@ -55,7 +55,7 @@ export default function AgenciasPage() {
             transition={{ duration: 0.8 }}
           >
             <h1 className="text-4xl md:text-[84px] font-black text-black leading-[0.9] tracking-tighter uppercase mb-8">
-              Agencias de <span className="text-aquatech-blue">Aquatech.</span>
+              Agencias de <span className="text-orbi-blue">Orbi.</span>
             </h1>
             <p className="text-lg md:text-xl text-gray-500 max-w-2xl font-medium leading-relaxed">
               Encuentra soporte técnico especializado, stock permanente y asesoría de ingeniería en nuestras sedes a nivel nacional.
@@ -79,10 +79,10 @@ export default function AgenciasPage() {
       </section>
 
       {/* Section 3: "Fino" Support Ribbon (Full Width) */}
-      <section className="bg-aquatech-dark text-white overflow-hidden relative">
+      <section className="bg-orbi-dark text-white overflow-hidden relative">
         <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row items-stretch">
           
-          <div className="hidden lg:flex w-1/4 bg-aquatech-blue items-center justify-center p-20 relative overflow-hidden">
+          <div className="hidden lg:flex w-1/4 bg-orbi-blue items-center justify-center p-20 relative overflow-hidden">
              <motion.div 
                animate={{ rotate: 360 }}
                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
@@ -108,7 +108,7 @@ export default function AgenciasPage() {
               </p>
               
               <div className="flex flex-wrap gap-6">
-                <button className="bg-aquatech-blue text-white px-12 py-6 font-bold uppercase tracking-widest text-xs hover:bg-white hover:text-black transition-all duration-300 flex items-center gap-4">
+                <button className="bg-orbi-blue text-white px-12 py-6 font-bold uppercase tracking-widest text-xs hover:bg-white hover:text-black transition-all duration-300 flex items-center gap-4">
                   Hablar con un Experto
                   <ArrowRight size={16} />
                 </button>
@@ -122,7 +122,7 @@ export default function AgenciasPage() {
 
         </div>
 
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-aquatech-blue/5 to-transparent pointer-events-none" />
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-orbi-blue/5 to-transparent pointer-events-none" />
       </section>
 
       <Footer />

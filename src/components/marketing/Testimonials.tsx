@@ -259,7 +259,7 @@ export default function Testimonials() {
           style={{ display: 'flex', justifyContent: 'center', marginTop: '40px' }}
         >
           <a 
-            href="https://www.google.com/search?q=Aquatech+Loja+rese%C3%B1as&rlz=1C1CHBF_esEC1095EC1095&oq=Aquatech+Loja+rese%C3%B1as&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQIRigAdIBCDcwNTVqMGo3qAIAsAIA&sourceid=chrome&ie=UTF-8"
+            href="https://www.google.com/search?q=Orbi+Loja+rese%C3%B1as&rlz=1C1CHBF_esEC1095EC1095&oq=Orbi+Loja+rese%C3%B1as&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQIRigAdIBCDcwNTVqMGo3qAIAsAIA&sourceid=chrome&ie=UTF-8"
             target="_blank"
             rel="noopener noreferrer"
             style={{

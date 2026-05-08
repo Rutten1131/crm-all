@@ -132,7 +132,7 @@ export default function DynamicQuoteForm({
     }
     
     message += `\n───────────────────────────\n`
-    message += `🏗️ *AQUATECH - INGENIERÍA PURA*`
+    message += `🏗️ *ORBI - INGENIERÍA PURA*`
 
     const wpUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
     window.open(wpUrl, '_blank')
@@ -157,7 +157,7 @@ export default function DynamicQuoteForm({
         }
         .square-input:focus { border-color: #004A87; }
         .square-input::placeholder { color: #9CA3AF; font-size: 10px; }
-        .btn-aquatech {
+        .btn-orbi {
           border-radius: 0px !important;
           text-transform: uppercase;
           letter-spacing: 0.2em;
@@ -311,7 +311,7 @@ export default function DynamicQuoteForm({
 
       <button 
         onClick={handleWhatsAppSend}
-        className="btn-aquatech bg-black text-white hover:bg-[#004A87] disabled:opacity-50"
+        className="btn-orbi bg-black text-white hover:bg-[#004A87] disabled:opacity-50"
         disabled={loading || filesData.some(f => f.loading)}
       >
         {loading ? 'Subiendo Referencias...' : 'Enviar Solicitud al Experto'} <Send size={16} />

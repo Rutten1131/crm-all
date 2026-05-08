@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import AdminLayoutClient from './AdminLayoutClient'
+import './admin.css'
 
 export default function AdminLayout({
   children,

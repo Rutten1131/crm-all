@@ -2,7 +2,7 @@ import React from 'react';
 import BlogEditor from '@/components/blog/BlogEditor';
 
 export const metadata = {
-  title: 'Escribir Artículo - Admin | Aquatech CRM'
+  title: 'Escribir Artículo - Admin | Orbi CRM'
 };
 
 export default function CreateBlogPostPage() {

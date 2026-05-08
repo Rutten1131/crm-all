@@ -1,5 +1,5 @@
 /**
- * utilidades para el sistema de sincronización offline de Aquatech
+ * utilidades para el sistema de sincronización offline de Orbi
  */
 
 // v354: Maximum file size for offline storage (IndexedDB)

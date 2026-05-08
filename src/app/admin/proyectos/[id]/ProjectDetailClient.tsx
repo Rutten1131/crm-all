@@ -1893,7 +1893,7 @@ export default function ProjectDetailClient({ project: initialProject, available
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(22)
       doc.setFont('helvetica', 'bold')
-      doc.text('AQUATECH - REPORTE DE PROYECTO', 20, 25)
+      doc.text('ORBI - REPORTE DE PROYECTO', 20, 25)
       
       doc.setFontSize(10)
       doc.setFont('helvetica', 'normal')
@@ -1984,7 +1984,7 @@ export default function ProjectDetailClient({ project: initialProject, available
       // Footer en cada página (opcional, aquí solo una vez al final)
       doc.setFontSize(9)
       doc.setTextColor(150, 150, 150)
-      doc.text('Este documento es un reporte generado automáticamente por el sistema Aquatech Field CRM.', 105, 285, { align: 'center' })
+      doc.text('Este documento es un reporte generado automáticamente por el sistema Orbi Field CRM.', 105, 285, { align: 'center' })
 
       doc.save(`Reporte_Proyecto_${project.id}_${project.title.replace(/\s+/g, '_')}.pdf`)
     } catch (err) {
@@ -2014,7 +2014,7 @@ export default function ProjectDetailClient({ project: initialProject, available
       doc.setTextColor(56, 189, 248)
       doc.setFontSize(10)
       doc.setFont('helvetica', 'bold')
-      doc.text('AQUATECH S.A.', 20, 18)
+      doc.text('ORBI S.A.', 20, 18)
       
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(24)
@@ -2238,7 +2238,7 @@ export default function ProjectDetailClient({ project: initialProject, available
         doc.setPage(i)
         doc.setFontSize(8)
         doc.setTextColor(160, 160, 160)
-        doc.text(`Aquatech CRM — Ficha de Proyecto #${fullProject.id}`, 20, 287)
+        doc.text(`Orbi CRM — Ficha de Proyecto #${fullProject.id}`, 20, 287)
         doc.text(`Página ${i} de ${pageCount}`, 175, 287)
       }
 

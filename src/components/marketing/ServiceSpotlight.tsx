@@ -42,14 +42,14 @@ export default function ServiceSpotlight() {
               <div className="flex items-center justify-center gap-6">
                 <Link 
                   href={spot.link} 
-                  className="text-[#0070C0] font-bold hover:underline flex items-center gap-1 group-hover:gap-2 transition-all"
+                  className="text-[#00D1C8] font-bold hover:underline flex items-center gap-1 group-hover:gap-2 transition-all"
                 >
                   Más información
                   <ChevronRight size={18} />
                 </Link>
                 <Link 
                   href="/cotizador" 
-                  className="text-[#0070C0] font-bold hover:underline flex items-center gap-1 group-hover:gap-2 transition-all"
+                  className="text-[#00D1C8] font-bold hover:underline flex items-center gap-1 group-hover:gap-2 transition-all"
                 >
                   Comprar
                   <ChevronRight size={18} />

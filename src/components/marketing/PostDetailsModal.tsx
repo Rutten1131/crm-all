@@ -145,7 +145,7 @@ export default function PostDetailsModal({ posts, onClose }: PostDetailsModalPro
             <div style={{ marginBottom: '2rem' }}>
                 <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--primary-color)', textTransform: 'uppercase', letterSpacing: '1px' }}>Hashtags</label>
                 <div style={{ color: 'var(--primary-color)', fontSize: '1rem', marginTop: '0.5rem', fontWeight: '500' }}>
-                    {currentVariant.hashtags || '#aquatech #mantenimiento #ecuador'}
+                    {currentVariant.hashtags || '#orbi #mantenimiento #ecuador'}
                 </div>
             </div>
 

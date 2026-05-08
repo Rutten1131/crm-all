@@ -3,7 +3,8 @@
 import { signIn, getSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { db } from '@/lib/db' // Assuming this path is correct
+import { db } from '@/lib/db' 
+import Logo from '@/components/Logo'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -87,12 +88,9 @@ export default function LoginPage() {
           </button>
         </div>
 
-        <div className="login-brand" style={{ marginTop: '20px' }}>
-          <img src="/logo.jpg" alt="Aquatech" className="login-logo" />
-          <h1 className="login-title">
-            A<span>Q</span>UATECH
-          </h1>
-          <p className="login-tagline">innovación hidráulica</p>
+        <div className="login-brand" style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Logo variant="negative" width={80} height={80} />
+          <p className="login-tagline" style={{ marginTop: '8px' }}>control total, alivio real</p>
         </div>
 
         <div className="login-divider" />
@@ -153,7 +151,7 @@ export default function LoginPage() {
         </form>
 
         <p className="login-footer">
-          © 2026 Aquatech Loja — Todos los derechos reservados
+          © 2026 ALL CRM — Todos los derechos reservados
         </p>
       </div>
 
@@ -173,9 +171,9 @@ export default function LoginPage() {
           position: absolute;
           inset: 0;
           background: 
-            radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.08) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(3, 105, 161, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 50% 80%, rgba(56, 189, 248, 0.05) 0%, transparent 50%);
+            radial-gradient(circle at 20% 50%, rgba(0, 209, 200, 0.06) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(43, 78, 255, 0.06) 0%, transparent 50%),
+            radial-gradient(circle at 50% 80%, rgba(0, 209, 200, 0.04) 0%, transparent 50%);
         }
 
         .login-card {

@@ -27,11 +27,11 @@ async function main() {
   const adminPassword = await bcrypt.hash('Contraseña123.', 10)
   const admin = await prisma.user.create({
     data: {
-      name: 'Administrador Aquatech',
-      email: 'admin@aquatech.ec',
+      name: 'Administrador Orbi',
+      email: 'admin@orbi.ec',
       phone: '+593 99 123 4567',
       role: 'ADMIN',
-      username: 'Aquatech',
+      username: 'Orbi',
       passwordHash: adminPassword,
     },
   })
@@ -41,7 +41,7 @@ async function main() {
   const op1 = await prisma.user.create({
     data: {
       name: 'Carlos Mendoza',
-      email: 'carlos@aquatech.ec',
+      email: 'carlos@orbi.ec',
       phone: '+593 99 234 5678',
       role: 'OPERATOR',
       username: 'carlos.mendoza',
@@ -51,7 +51,7 @@ async function main() {
   const op2 = await prisma.user.create({
     data: {
       name: 'María Fernanda López',
-      email: 'maria@aquatech.ec',
+      email: 'maria@orbi.ec',
       phone: '+593 99 345 6789',
       role: 'OPERATOR',
       username: 'maria.lopez',
@@ -61,7 +61,7 @@ async function main() {
   const op3 = await prisma.user.create({
     data: {
       name: 'Jorge Ramírez',
-      email: 'jorge@aquatech.ec',
+      email: 'jorge@orbi.ec',
       phone: '+593 99 456 7890',
       role: 'OPERATOR',
       username: 'jorge.ramirez',
@@ -231,7 +231,7 @@ async function main() {
   // Create BrandConfig
   await prisma.brandConfig.create({
     data: {
-      name: 'Aquatech Principal',
+      name: 'Orbi Principal',
       imagePrompt: 'Genera una imagen fotográfica profesional, realista, luminosa, tema de piscinas cristalinas, spas o sistemas hidráulicos. Usa una paleta con acentos en azul turquesa (#0891b2) y tonos limpios.',
       brandColors: '["#0891b2", "#ffffff", "#f8fafc", "#334155"]',
       typography: 'Inter, sans-serif',
@@ -241,7 +241,7 @@ async function main() {
   })
 
   console.log('✅ Seed completed successfully!')
-  console.log(`   Admin: Aquatech / Contraseña123.`)
+  console.log(`   Admin: Orbi / Contraseña123.`)
   console.log(`   Operators: carlos.mendoza, maria.lopez, jorge.ramirez / operador123`)
   console.log(`   Projects: ${4} created`)
   console.log(`   Materials: ${12} created`)
@@ -255,3 +255,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect()
   })
+

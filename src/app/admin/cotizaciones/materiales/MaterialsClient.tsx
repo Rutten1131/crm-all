@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
+import { revalidateRoute } from '@/actions/revalidate'
 
 export default function MaterialsClient({ initialMaterials, categories }: any) {
   const router = useRouter()
+  const pathname = usePathname()
   const [materials, setMaterials] = useState(initialMaterials)
   const [search, setSearch] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -48,7 +50,7 @@ export default function MaterialsClient({ initialMaterials, categories }: any) {
       })
       if (res.ok) {
         setIsModalOpen(false)
-        router.refresh()
+        revalidateRoute(pathname)
         // Simple local update for responsiveness
         const updated = await res.json()
         if (editingMaterial) {

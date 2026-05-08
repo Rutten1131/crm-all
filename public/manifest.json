@@ -1,7 +1,7 @@
 {
-  "name": "Aquatech CRM — Innovación Hidráulica",
-  "short_name": "Aquatech",
-  "description": "Sistema de gestión y seguimiento de proyectos en campo para Aquatech Loja",
+  "name": "Orbi CRM — Innovación Hidráulica",
+  "short_name": "Orbi",
+  "description": "Sistema de gestión y seguimiento de proyectos en campo para Orbi Loja",
   "start_url": "/admin",
   "scope": "/",
   "id": "/admin/operador",
@@ -24,3 +24,4 @@
     }
   ]
 }
+

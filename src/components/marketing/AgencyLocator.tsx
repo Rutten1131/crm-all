@@ -94,7 +94,7 @@ export default function AgencyLocator({
               fontWeight: '500'
             }}
           />
-          <button className="aq-locator-btn hover:bg-[#0070C0] transition-colors" style={{
+          <button className="aq-locator-btn hover:bg-[#00D1C8] transition-colors" style={{
             backgroundColor: '#004A87',
             color: 'white',
             padding: '16px 40px',

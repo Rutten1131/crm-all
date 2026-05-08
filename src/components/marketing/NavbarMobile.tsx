@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Menu, X, ChevronRight } from 'lucide-react'
 import { dropdownItems, simpleItems } from './nav-data'
+import Logo from '../Logo'
 
 export default function NavbarMobile() {
   const [isOpen, setIsOpen] = useState(false)
@@ -52,12 +53,7 @@ export default function NavbarMobile() {
         onClick={closeMenu} 
         className="flex items-center relative z-0"
       >
-        <div className="relative w-[22px] h-[22px] overflow-hidden bg-[#0070C0] p-0.5" style={{ marginRight: '10px' }}>
-          <Image src="/logo.jpg" alt="Aquatech" fill className="object-contain" sizes="22px" />
-        </div>
-        <span style={{ fontSize: '15px', fontWeight: 800, color: '#000', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
-          Aquatech
-        </span>
+        <Logo variant="full" width={100} height={32} className="text-[#1A1F3C]" />
       </Link>
 
       {/* Mobile Menu Drawer (Apple Grid Style) */}
@@ -96,7 +92,7 @@ export default function NavbarMobile() {
                       strokeWidth={2}
                       className={`transition-all duration-300 ${
                         activeMobileCategory === item.name 
-                          ? 'rotate-90 text-[#0070C0]' 
+                          ? 'rotate-90 text-[#2B4EFF]' 
                           : 'opacity-40 text-black'
                       }`} 
                     />
@@ -152,7 +148,7 @@ export default function NavbarMobile() {
 
           {/* Footer of Menu */}
           <div className="mt-auto py-12 opacity-20 text-[10px] font-bold tracking-widest text-center uppercase border-t border-gray-50">
-            Aquatech Digital Ecosystem
+            ALL Digital Ecosystem
           </div>
         </div>
       </div>

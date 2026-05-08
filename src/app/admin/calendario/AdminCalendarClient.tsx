@@ -108,7 +108,7 @@ export default function AdminCalendarClient({
       }
     }
 
-    const syncChannel = new BroadcastChannel('aquatech-sync')
+    const syncChannel = new BroadcastChannel('all-sync')
     syncChannel.addEventListener('message', handleSyncFinished)
     window.addEventListener('sync-success' as any, handleSyncSuccess)
 

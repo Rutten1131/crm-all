@@ -1,7 +1,7 @@
-# ESTADO_NOTIFICACIONES.md — Aquatech CRM (PWA)
+# ESTADO_NOTIFICACIONES.md — Orbi CRM (PWA)
 
 ## 1. Propósito
-Este documento resume la arquitectura, los archivos involucrados, el flujo de trabajo, los probables bugs conocidos y las áreas de mejora del sistema de **notificaciones push** (PWA) en Aquatech CRM.
+Este documento resume la arquitectura, los archivos involucrados, el flujo de trabajo, los probables bugs conocidos y las áreas de mejora del sistema de **notificaciones push** (PWA) en Orbi CRM.
 
 > [!NOTE]
 > Este documento fue generado a partir del análisis del chat: [Chat f49c2b17-40a8-4204-bb4f-24397b623e99](file:///C:/Users/Smart/.gemini/antigravity/brain/f49c2b17-40a8-4204-bb4f-24397b623e99/overview.txt)
@@ -27,11 +27,11 @@ graph TD
     SW -->|Redirige| R[App Admin/Operador]
 ```
 
-- **Service Worker**: [custom-sw.js](file:///d:/Abel%20paginas/Aquatech/Crm%20Aquatech%20-%20cloudfare%204/public/custom-sw.js) (v315) escucha `push` y `notificationclick`.  
-- **Cliente**: [usePushNotifications.ts](file:///d:/Abel%20paginas/Aquatech/Crm%20Aquatech%20-%20cloudfare%204/src/hooks/usePushNotifications.ts) hook gestiona ciclo de vida de suscripción.  
-- **Servidor**: [push.ts](file:///d:/Abel%20paginas/Aquatech/Crm%20Aquatech%20-%20cloudfare%204/src/lib/push.ts) envía notificaciones y limpia suscripciones 410.  
+- **Service Worker**: [custom-sw.js](file:///d:/Abel%20paginas/Orbi/Crm%20Orbi%20-%20cloudfare%204/public/custom-sw.js) (v315) escucha `push` y `notificationclick`.  
+- **Cliente**: [usePushNotifications.ts](file:///d:/Abel%20paginas/Orbi/Crm%20Orbi%20-%20cloudfare%204/src/hooks/usePushNotifications.ts) hook gestiona ciclo de vida de suscripción.  
+- **Servidor**: [push.ts](file:///d:/Abel%20paginas/Orbi/Crm%20Orbi%20-%20cloudfare%204/src/lib/push.ts) envía notificaciones y limpia suscripciones 410.  
 - **API endpoints**: `/api/push/subscribe` (registro/borrado) y `/api/push/config` (VAPID pública).  
-- **Manifest**: [manifest.json](file:///d:/Abel%20paginas/Aquatech/Crm%20Aquatech%20-%20cloudfare%204/public/manifest.json) con iconos y colores PWA.
+- **Manifest**: [manifest.json](file:///d:/Abel%20paginas/Orbi/Crm%20Orbi%20-%20cloudfare%204/public/manifest.json) con iconos y colores PWA.
 
 ## 3. Archivos Clave
 

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ChevronDown } from 'lucide-react'
 import { dropdownItems, simpleItems } from './nav-data'
+import Logo from '../Logo'
 
 export default function NavbarDesktop() {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
@@ -20,15 +21,9 @@ export default function NavbarDesktop() {
   }
 
   return (
-    <div id="header-desktop" className="h-full w-full items-center justify-center px-8">
-      {/* Brand */}
+    <div id="header-desktop" className="h-full max-w-7xl mx-auto flex items-center px-8">
       <Link href="/" className="flex items-center shrink-0" style={{ marginRight: '32px' }}>
-        <div className="relative w-[22px] h-[22px] overflow-hidden bg-[#0070C0] p-0.5" style={{ marginRight: '10px' }}>
-          <Image src="/logo.jpg" alt="Aquatech" fill className="object-contain" sizes="22px" />
-        </div>
-        <span style={{ fontSize: '15px', fontWeight: 800, color: '#000', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
-          Aquatech
-        </span>
+        <Logo variant="full" width={110} height={36} className="text-[#1A1F3C]" />
       </Link>
 
       {/* Nav Items — RESTORED TO PERFECT VERSION */}
@@ -41,11 +36,11 @@ export default function NavbarDesktop() {
         >
           <Link
             href={item.href}
-            className="flex items-center h-full hover:text-[#0070C0] transition-colors whitespace-nowrap"
+            className="flex items-center h-full hover:text-[#2B4EFF] transition-colors whitespace-nowrap"
             style={{ 
               fontSize: '14px', 
-              fontWeight: 600, 
-              color: '#1d1d1f', 
+              fontWeight: 500, 
+              color: '#1A1F3C', 
               paddingLeft: '16px', 
               paddingRight: '16px' 
             }}
@@ -71,8 +66,8 @@ export default function NavbarDesktop() {
                 <Link
                   key={sub.name}
                   href={sub.href}
-                  className="block hover:text-[#0070C0] hover:bg-[#f5f5f7] transition-all"
-                  style={{ padding: '10px 20px', fontSize: '14px', fontWeight: 400, color: '#424245' }}
+                  className="block hover:text-[#2B4EFF] hover:bg-[#F0F4FF] transition-all"
+                  style={{ padding: '10px 20px', fontSize: '14px', fontWeight: 400, color: '#6B7280' }}
                 >
                   {sub.name}
                 </Link>
@@ -87,11 +82,11 @@ export default function NavbarDesktop() {
         <Link 
           key={item.name}
           href={item.href}
-          className="flex items-center h-[44px] hover:text-[#0070C0] transition-colors whitespace-nowrap"
+          className="flex items-center h-[44px] hover:text-[#2B4EFF] transition-colors whitespace-nowrap"
           style={{ 
             fontSize: '14px', 
-            fontWeight: 600, 
-            color: '#1d1d1f', 
+            fontWeight: 500, 
+            color: '#1A1F3C', 
             paddingLeft: '16px', 
             paddingRight: '16px' 
           }}

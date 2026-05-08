@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation';
 import { formatDateEcuador } from '@/lib/date-utils';
 
 export const metadata = {
-  title: 'Blog - Admin | Aquatech CRM'
+  title: 'Blog - Admin | Orbi CRM'
 };
 
 export default async function AdminBlogPage() {

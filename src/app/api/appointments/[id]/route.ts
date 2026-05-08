@@ -81,7 +81,7 @@ export async function PATCH(
           const nameClientText = updated.clientName ? `\n👤 *Cliente:*\n${updated.clientName}` : '';
           const phoneClientText = updated.clientPhone ? `\n📞 *Teléfono Cliente:*\n${updated.clientPhone}` : '';
           
-          const message = `*Notificación Aquatech*\n\nHola ${updated.user.name}, se ha *actualizado* una tarea que tienes asignada:\n📌 *${updated.title}*\n📅 Nueva fecha: ${startDateLocale}\n⏰ Nueva hora: ${startTimeLocale}${descrText}${nameClientText}${phoneClientText}\n\nRevisa tu perfil para ver los cambios.`;
+          const message = `*Notificación Orbi*\n\nHola ${updated.user.name}, se ha *actualizado* una tarea que tienes asignada:\n📌 *${updated.title}*\n📅 Nueva fecha: ${startDateLocale}\n⏰ Nueva hora: ${startTimeLocale}${descrText}${nameClientText}${phoneClientText}\n\nRevisa tu perfil para ver los cambios.`;
 
           await sendWhatsAppMessage(updated.user.phone, message);
           console.log(`✅ WA actualización enviado a ${updated.user.name} (${updated.user.phone})`);

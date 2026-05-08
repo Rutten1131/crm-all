@@ -4,8 +4,8 @@ import InventarioClient from './InventarioClient'
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
-  title: 'Inventario - Aquatech CRM',
-  description: 'Gestión de materiales y suministros de Aquatech.',
+  title: 'Inventario - Orbi CRM',
+  description: 'Gestión de materiales y suministros de Orbi.',
 }
 
 export default async function InventarioPage() {

@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { deepSerialize } from '@/lib/serializable'
 
 export async function GET(req: Request) {
   try {
@@ -28,8 +29,8 @@ export async function GET(req: Request) {
       ]
     })
     
-    return NextResponse.json(materials, {
-      headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=120' }
+    return NextResponse.json(deepSerialize(materials), {
+      headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' }
     })
   } catch (error) {
     console.error('Error fetching materials:', error)
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
         stock: Number(data.stock || 0)
       }
     })
-    return NextResponse.json(material)
+    return NextResponse.json(deepSerialize(material))
   } catch (error) {
     console.error('Error creating material:', error)
     return NextResponse.json({ error: 'Error creating material' }, { status: 500 })

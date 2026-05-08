@@ -19,8 +19,8 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Do not render marketing navbar on admin/CRM pages
-  if (pathname?.startsWith('/admin')) {
+  // Do not render marketing navbar on admin/CRM pages or the homepage
+  if (pathname?.startsWith('/admin') || pathname === '/') {
     return null
   }
 

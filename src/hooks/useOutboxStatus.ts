@@ -26,8 +26,8 @@ export function useOutboxStatus() {
 
     // Escuchar eventos personalizados que el SW o la app podrían disparar
     const handleSyncChange = () => check();
-    window.addEventListener('aquatech-sync-finished', handleSyncChange);
-    window.addEventListener('aquatech-item-synced', handleSyncChange);
+    window.addEventListener('orbi-sync-finished', handleSyncChange);
+    window.addEventListener('orbi-item-synced', handleSyncChange);
     window.addEventListener('online', handleSyncChange);
     
     // Escuchar mensajes del Service Worker
@@ -41,8 +41,8 @@ export function useOutboxStatus() {
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('aquatech-sync-finished', handleSyncChange);
-      window.removeEventListener('aquatech-item-synced', handleSyncChange);
+      window.removeEventListener('orbi-sync-finished', handleSyncChange);
+      window.removeEventListener('orbi-item-synced', handleSyncChange);
       window.removeEventListener('online', handleSyncChange);
     };
   }, []);

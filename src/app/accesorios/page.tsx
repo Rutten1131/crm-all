@@ -27,7 +27,7 @@ const subCategories = [
 ]
 
 const faqs = [
-  { q: "¿LOS REPUESTOS DE MARCAS COMO BALBOA O HAYWARD QUE OFRECEN SON ORIGINALES?", a: "Sí. Aquatech actúa como un integrador tecnológico que selecciona marcas de prestigio internacional. En nuestro inventario contamos con componentes originales de Hayward y Balboa para garantizar la total compatibilidad y durabilidad de sus sistemas." },
+  { q: "¿LOS REPUESTOS DE MARCAS COMO BALBOA O HAYWARD QUE OFRECEN SON ORIGINALES?", a: "Sí. Orbi actúa como un integrador tecnológico que selecciona marcas de prestigio internacional. En nuestro inventario contamos con componentes originales de Hayward y Balboa para garantizar la total compatibilidad y durabilidad de sus sistemas." },
   { q: "¿REALIZAN ENVÍOS DE REPUESTOS Y ACCESORIOS A NIVEL NACIONAL?", a: "Contamos con una red logística desarrollada para atender todo el país, incluyendo zonas fronterizas como Macará. Gracias a nuestras cuatro agencias en el sur, gestionamos la entrega eficiente de kits y equipos pesados superando limitaciones geográficas." },
   { q: "¿OFRECEN ASESORÍA TÉCNICA SI DECIDO INSTALAR EL REPUESTO YO MISMO?", a: "Nuestra propuesta de valor es integral. Aunque contamos con instaladores especializados, brindamos atención personalizada vía WhatsApp para guiarle en la selección y uso correcto de los componentes, asegurando el éxito de su instalación." },
   { q: "¿QUÉ DIFERENCIA HAY EN LA GARANTÍA DE PIEZAS ELECTRÓNICAS Y MECÁNICAS?", a: "Protegemos su inversión seleccionando equipos con alta disponibilidad de repuestos en Ecuador. Las piezas mecánicas se benefician de nuestros protocolos de mantenimiento preventivo, mientras que la electrónica está diseñada para resistir las condiciones hidráulicas específicas de la región." },
@@ -99,7 +99,7 @@ export default function AccesoriosPage() {
         
         h1, h2, h3, h4 { font-family: var(--font-brand) !important; }
         
-        .btn-aquatech {
+        .btn-orbi {
           border-radius: 0px !important;
           border: 1px solid rgba(0,0,0,0.1);
           text-transform: uppercase;
@@ -109,7 +109,7 @@ export default function AccesoriosPage() {
           padding: 18px 40px;
           transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .btn-aquatech:hover {
+        .btn-orbi:hover {
           background: #004A87;
           color: white;
           border-color: #004A87;
@@ -153,12 +153,12 @@ export default function AccesoriosPage() {
             className="text-5xl sm:text-6xl md:text-[110px] font-black text-white mb-10 tracking-tighter leading-[0.9] md:leading-[0.8] text-center"
           >
             Accesorios.<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#004A87] to-[#0070C0]">Repuestos & Control.</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#004A87] to-[#00D1C8]">Repuestos & Control.</span>
           </motion.h1>
  
           <Link 
             href="#catalogo" 
-            className="btn-aquatech bg-white text-black"
+            className="btn-orbi bg-white text-black"
           >
             Ver Catálogo 2026
           </Link>

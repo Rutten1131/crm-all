@@ -1,16 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono&display=swap');
 
 @import "tailwindcss";
 
 @theme {
-  --font-brand: "ITC Avant Garde Gothic", "Avant Garde", "Montserrat", sans-serif;
-  --font-sans: "Poppins", sans-serif;
+  --font-brand: "Outfit", "Inter", sans-serif;
+  --font-sans: "Inter", "Outfit", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
   
-  --color-brand-blue: #0070C0;
-  --color-brand-dark: #000000;
-  --color-brand-gray: #6e6e73;
-  --color-brand-light: #f5f5f7;
-  --color-brand-cyan: #38BDF8;
+  --color-primary: #00D1C8;
+  --color-primary-dark: #009E97;
+  --color-primary-light: #33DBCF;
+  --color-accent: #2B4EFF;
 }
 
 @layer utilities {
@@ -21,7 +21,7 @@
 
 @layer base {
   *, *::before, *::after {
-    border-color: var(--color-gray-200, currentColor);
+    border-color: var(--border);
   }
 }
 
@@ -34,33 +34,38 @@ html, body {
   padding: 0;
   overflow-x: clip;
   width: 100%;
+  background-color: var(--bg-deep);
+  color: var(--text);
 }
 
 /* ──────────────────────────────────────
-   DESIGN TOKENS — AQUATECH
+   DESIGN TOKENS — ALL BRAND IDENTITY (DARK)
    ────────────────────────────────────── */
 :root {
-  /* Brand Colors */
-  --primary: #38BDF8;
-  --primary-hover: #22A8E8;
-  --primary-dark: #0369A1;
-  --primary-glow: rgba(56, 189, 248, 0.15);
-  --primary-glow-strong: rgba(56, 189, 248, 0.3);
+  /* Brand Colors — ALL */
+  --primary: #00D1C8;
+  --primary-hover: #00B8B0;
+  --primary-dark: #009E97;
+  --primary-glow: rgba(0, 209, 200, 0.15);
+  --primary-glow-strong: rgba(0, 209, 200, 0.3);
+  --accent: #2B4EFF;
+  --accent-hover: #1F3BB3;
+  --gradient-brand: linear-gradient(135deg, #00D1C8, #2B4EFF);
 
   /* Backgrounds */
-  --bg-deep: #0B1623;
-  --bg-body: #0F1D2E;
-  --bg-card: #132238;
-  --bg-card-hover: #1A2D46;
-  --bg-surface: #1A2D46;
-  --bg-input: #162133;
-  --bg-modal: #101E30;
+  --bg-deep: #0C1220;
+  --bg-body: #101828;
+  --bg-card: #151F30;
+  --bg-card-hover: #1A2840;
+  --bg-surface: #1A2840;
+  --bg-input: #131B28;
+  --bg-modal: #0E1622;
 
   /* Text */
   --text: #FFFFFF;
   --text-secondary: #F1F5F9;
-  --text-muted: #CBD5E1;
-  --text-inverse: #0B1623;
+  --text-muted: #8899AA;
+  --text-inverse: #0C1220;
 
   /* Status */
   --success: #22C55E;
@@ -69,17 +74,18 @@ html, body {
   --warning-bg: rgba(245, 158, 11, 0.12);
   --danger: #EF4444;
   --danger-bg: rgba(239, 68, 68, 0.12);
-  --info: #38BDF8;
-  --info-bg: rgba(56, 189, 248, 0.12);
+  --info: #00D1C8;
+  --info-bg: rgba(0, 209, 200, 0.12);
 
   /* Borders */
-  --border: rgba(56, 189, 248, 0.1);
-  --border-hover: rgba(56, 189, 248, 0.25);
-  --border-active: rgba(56, 189, 248, 0.5);
+  --border: rgba(0, 209, 200, 0.1);
+  --border-hover: rgba(0, 209, 200, 0.25);
+  --border-active: rgba(0, 209, 200, 0.5);
 
   /* Typography */
-  --font-brand: 'ITC Avant Garde Gothic', 'Avant Garde', 'Montserrat', sans-serif;
-  --font-body: 'Poppins', sans-serif;
+  --font-brand: 'Outfit', sans-serif;
+  --font-body: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
   /* Spacing */
   --space-xs: 4px;
@@ -89,29 +95,29 @@ html, body {
   --space-xl: 32px;
   --space-2xl: 48px;
 
-  /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
+  /* Radius - Professional Workspace Feel */
+  --radius-sm: 8px;
+  --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
   --radius-full: 50%;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 20px rgba(56, 189, 248, 0.15);
+  /* Shadows - Subtle & Soft */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-main: 0 4px 20px rgba(0, 102, 255, 0.08);
 
   /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 250ms ease;
-  --transition-slow: 400ms ease;
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Layout */
-  --sidebar-width: 260px;
-  --sidebar-collapsed: 72px;
-  --header-height: 64px;
-  --mobile-nav-height: 64px;
+  --sidebar-width: 270px;
+  --sidebar-collapsed: 80px;
+  --header-height: 70px;
+  --mobile-nav-height: 70px;
 }
 
 /* Notification Badges */

@@ -7,7 +7,7 @@ export async function GET() {
     { 
       status: 'ok', 
       timestamp: new Date().toISOString(),
-      message: 'Aquatech CRM is alive'
+      message: 'Orbi CRM is alive'
     }, 
     { status: 200 }
   );

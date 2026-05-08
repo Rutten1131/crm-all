@@ -262,7 +262,7 @@ export default function QuoteFormClient({ clients, materials, projects = [], pre
       docType: 'COTIZACIÓN',
       docId: initialQuote?.id ? String(initialQuote.id) : 'VISTA-PREVIA',
       notes: notes,
-      sellerName: session?.user?.name || 'Aquatech',
+      sellerName: session?.user?.name || 'Orbi',
       action: 'preview',
       optionalSection: {
         title: optionalTitle,
@@ -312,7 +312,7 @@ export default function QuoteFormClient({ clients, materials, projects = [], pre
       docType: 'COTIZACIÓN',
       docId: initialQuote?.id ? String(initialQuote.id) : 'PENDIENTE',
       notes: notes,
-      sellerName: session?.user?.name || 'Aquatech',
+      sellerName: session?.user?.name || 'Orbi',
       action: 'save', // Direct download
       optionalSection: {
         title: optionalTitle,
@@ -382,7 +382,7 @@ export default function QuoteFormClient({ clients, materials, projects = [], pre
           docType: 'COTIZACIÓN',
           docId: initialQuote?.id || 'TEMP',
           notes: payload.notes,
-          sellerName: session?.user?.name || 'Aquatech',
+          sellerName: session?.user?.name || 'Orbi',
           action: 'instance',
           optionalSection: {
             title: optionalTitle,

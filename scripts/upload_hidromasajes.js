@@ -9,7 +9,7 @@ const BUNNY_STORAGE_ZONE = "cesarweb";
 const BUNNY_CDN_DOMAIN = "cesarweb.b-cdn.net";
 
 // Target Folder with your required suffix
-const TARGET_FOLDER = "Hidromasaje-Aquatech";
+const TARGET_FOLDER = "Hidromasaje-Orbi";
 
 const sourceDir = path.join(__dirname, '..', 'tmp-assets');
 

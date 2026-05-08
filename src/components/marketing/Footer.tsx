@@ -5,15 +5,15 @@ import Image from 'next/image'
 import { ExternalLink } from 'lucide-react'
 
 const navLinks = [
-  { name: 'Hidromasajes', href: '/hidromasajes' },
-  { name: 'Turcos', href: '/turcos' },
-  { name: 'Saunas', href: '/saunas' },
-  { name: 'Piletas', href: '/piletas' },
-  { name: 'Tuberías', href: '/tuberias' },
-  { name: 'Agua Potable', href: '/agua-potable' },
-  { name: 'Riego', href: '/riego' },
-  { name: 'Accesorios', href: '/accesorios' },
-  { name: 'Agencias', href: '/agencias' },
+  { name: 'Dashboard', href: '/dashboard' },
+  { name: 'Clientes', href: '/clientes' },
+  { name: 'Proyectos', href: '/proyectos' },
+  { name: 'Facturación', href: '/facturacion' },
+  { name: 'WhatsApp', href: '/whatsapp' },
+  { name: 'Reportes', href: '/reportes' },
+  { name: 'Planes', href: '/planes' },
+  { name: 'Soporte', href: '/soporte' },
+  { name: 'Demo', href: '/demo' },
   { name: 'Blog', href: '/blog' },
 ]
 
@@ -83,7 +83,7 @@ export default function Footer() {
               key={item.name}
               href={item.href}
               style={{ fontSize: '13px', fontWeight: 600, color: '#424245', padding: '8px 16px', textDecoration: 'none', whiteSpace: 'nowrap' }}
-              className="hover:text-[#0070C0] transition-colors"
+              className="hover:text-[#00D1C8] transition-colors"
             >
               {item.name}
             </Link>
@@ -100,40 +100,40 @@ export default function Footer() {
             {/* Agencias */}
             <div className="footer-col" style={{ flex: 'none' }}>
               <span>Agencias</span>
-              <Link href="/agencias" className="footer-sublink hover:text-[#0070C0] transition-colors" style={{ color: '#424245', textDecoration: 'none' }}>
+              <Link href="/agencias" className="footer-sublink hover:text-[#00D1C8] transition-colors" style={{ color: '#424245', textDecoration: 'none' }}>
                 Encuéntranos
               </Link>
             </div>
 
             {/* Síguenos */}
             <div className="footer-col" style={{ flex: 'none' }}>
-              <span>SÍGUENOS EN</span>
+              <span>Síguenos</span>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <Link 
-                  href="https://www.facebook.com/aquariegoloja?locale=es_LA" 
+                  href="https://www.facebook.com/allcrm" 
                   target="_blank" 
                   style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#424245', textDecoration: 'none' }} 
-                  className="footer-sublink hover:text-[#0070C0] transition-colors"
+                  className="footer-sublink hover:text-[#2B4EFF] transition-colors"
                 >
                   FB <ExternalLink size={10} />
                 </Link>
                 <Link 
-                  href="https://www.instagram.com/aquatech_loja/" 
+                  href="https://www.instagram.com/allcrm_ec/" 
                   target="_blank" 
                   style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#424245', textDecoration: 'none' }} 
-                  className="footer-sublink hover:text-[#0070C0] transition-colors"
+                  className="footer-sublink hover:text-[#2B4EFF] transition-colors"
                 >
                   IG <ExternalLink size={10} />
                 </Link>
               </div>
             </div>
 
-            {/* Aquatech */}
+            {/* ALL */}
             <div className="footer-col" style={{ flex: 'none' }}>
-              <span>Aquatech</span>
+              <span>ALL CRM</span>
               <div style={{ display: 'flex', gap: '6px', flexDirection: 'column' }}>
-                <Link href="/nosotros" className="footer-sublink hover:text-[#0070C0] transition-colors" style={{ color: '#424245', textDecoration: 'none' }}>Nosotros</Link>
-                <Link href="/preguntas" className="footer-sublink hover:text-[#0070C0] transition-colors" style={{ color: '#424245', textDecoration: 'none' }}>FAQ</Link>
+                <Link href="/nosotros" className="footer-sublink hover:text-[#2B4EFF] transition-colors" style={{ color: '#424245', textDecoration: 'none' }}>Nosotros</Link>
+                <Link href="/preguntas" className="footer-sublink hover:text-[#2B4EFF] transition-colors" style={{ color: '#424245', textDecoration: 'none' }}>FAQ</Link>
               </div>
             </div>
           </div>
@@ -147,31 +147,31 @@ export default function Footer() {
           
           {/* Logo + Brand */}
           <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', gap: '10px' }}>
-            <div style={{ position: 'relative', width: '22px', height: '22px', overflow: 'hidden', backgroundColor: '#0070C0', padding: '2px' }}>
-              <Image src="/logo.jpg" alt="Aquatech" fill className="object-contain" sizes="22px" />
+            <div style={{ position: 'relative', width: '22px', height: '22px', overflow: 'hidden', backgroundColor: '#2B4EFF', borderRadius: '4px', padding: '2px' }}>
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '10px', fontWeight: '900' }}>ALL</div>
             </div>
             <span style={{ fontSize: '15px', fontWeight: 800, color: '#000', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
-              Aquatech
+              ALL CRM
             </span>
           </Link>
 
           {/* Copyright */}
           <p style={{ fontSize: '11px', color: '#86868b', fontWeight: 400, margin: 0, textAlign: 'center', lineHeight: 1.6 }}>
-            © {year} Aquatech Ecuador S.A. Todos los derechos reservados.
+            © {year} ALL CRM Ecuador. Todos los derechos reservados.
           </p>
 
           {/* Designer Credit */}
           <p style={{ fontSize: '10px', color: '#B0B0B5', fontWeight: 500, margin: 0, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Diseñado por <Link href="https://www.cesarreyesjaramillo.com/" target="_blank" style={{ color: '#0070C0', textDecoration: 'none' }} className="hover:underline">Cesar Reyes</Link> | Aquatech {year}
+            Powered by <Link href="/" style={{ color: '#2B4EFF', textDecoration: 'none' }} className="hover:underline">ALL Technology</Link> | {year}
           </p>
 
           {/* Legal Links */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <Link href="/privacidad" style={{ fontSize: '12px', color: '#86868b', textDecoration: 'none' }} className="hover:text-[#0070C0] transition-colors">Privacidad</Link>
+            <Link href="/privacidad" style={{ fontSize: '12px', color: '#86868b', textDecoration: 'none' }} className="hover:text-[#00D1C8] transition-colors">Privacidad</Link>
             <span style={{ color: 'rgba(0,0,0,0.15)' }}>|</span>
-            <Link href="/legal" style={{ fontSize: '12px', color: '#86868b', textDecoration: 'none' }} className="hover:text-[#0070C0] transition-colors">Legal</Link>
+            <Link href="/legal" style={{ fontSize: '12px', color: '#86868b', textDecoration: 'none' }} className="hover:text-[#00D1C8] transition-colors">Legal</Link>
             <span style={{ color: 'rgba(0,0,0,0.15)' }}>|</span>
-            <Link href="/mapa" style={{ fontSize: '12px', color: '#86868b', textDecoration: 'none' }} className="hover:text-[#0070C0] transition-colors">Mapa del Sitio</Link>
+            <Link href="/mapa" style={{ fontSize: '12px', color: '#86868b', textDecoration: 'none' }} className="hover:text-[#00D1C8] transition-colors">Mapa del Sitio</Link>
           </div>
         </div>
       </div>

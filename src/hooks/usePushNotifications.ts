@@ -225,7 +225,7 @@ export function usePushNotifications() {
         try {
           if ('Notification' in window && Notification.permission === 'granted') {
             new Notification('✅ Notificaciones activadas', {
-              body: '¡Perfecto! A partir de ahora recibirás alertas de Aquatech.',
+              body: '¡Perfecto! A partir de ahora recibirás alertas de Orbi.',
               icon: '/icon-192.png',
               badge: '/icon-192.png',
               // @ts-ignore

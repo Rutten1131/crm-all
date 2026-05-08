@@ -9,6 +9,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/lib/db'
 import { formatToEcuador } from '@/lib/date-utils'
+import Logo from './Logo'
 
 type NavItem = {
   label: string
@@ -182,7 +183,7 @@ export default memo(function Sidebar() {
   })
 
   useEffect(() => {
-    const channel = new BroadcastChannel('aquatech-sync');
+    const channel = new BroadcastChannel('orbi-sync');
     channel.onmessage = (event) => {
       const { type, current, total, projectName } = event.data;
       
@@ -470,14 +471,14 @@ export default memo(function Sidebar() {
       }
       import('dexie').then((m) => {
         const Dexie = m.default;
-        Dexie.delete('AquatechOfflineDB').catch(() => {})
+        Dexie.delete('OrbiOfflineDB').catch(() => {})
       }).catch(() => {})
       localStorage.clear()
       sessionStorage.clear()
       if (typeof window !== 'undefined' && 'caches' in window) {
         const names = await caches.keys()
         for (const name of names) {
-          if (name !== 'aquatech-static' && name !== 'aquatech-fonts') await caches.delete(name)
+          if (name !== 'orbi-static' && name !== 'orbi-fonts') await caches.delete(name)
         }
       }
       await signOut({ redirect: false })
@@ -513,17 +514,17 @@ export default memo(function Sidebar() {
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <div className="mobile-header-title">A<span>Q</span>UATECH</div>
+        <Logo variant="negative" width={32} height={32} />
       </div>
 
       <div className={`sidebar-overlay ${mobileOpen ? 'open' : ''}`} onClick={() => setMobileOpen(false)} />
 
       <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
-          <img src="/logo.jpg" alt="Aquatech" className="sidebar-brand-logo" />
-          <div>
-            <div className="sidebar-brand-text">A<span>Q</span>UATECH</div>
-            <span className="sidebar-brand-sub">innovación hidráulica</span>
+          <Logo variant="negative" width={40} height={40} className="sidebar-brand-logo" />
+          <div className="flex flex-col">
+            <span className="font-bold text-lg tracking-tight text-[var(--text)]" style={{ fontFamily: 'Outfit, Inter, sans-serif' }}>ALL</span>
+            <span className="sidebar-brand-sub">control total, alivio real</span>
           </div>
         </div>
 
@@ -553,7 +554,7 @@ export default memo(function Sidebar() {
                       </button>
                       
                       {openMenus[item.label] && (
-                        <div style={{ display: 'flex', flexDirection: 'column', paddingLeft: '28px', marginTop: '4px', gap: '2px', borderLeft: '1px solid var(--border-color)', marginLeft: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', paddingLeft: '28px', marginTop: '4px', gap: '2px', borderLeft: '1px solid var(--border)', marginLeft: '12px' }}>
                           {item.subItems.map(subItem => (
                             <Link
                               key={subItem.href}
@@ -592,10 +593,10 @@ export default memo(function Sidebar() {
         {/* v273: Unified Sync Status Indicator */}
         <div style={{ 
           padding: '12px 20px', 
-          borderTop: '1px solid rgba(255,255,255,0.05)',
+          borderTop: '1px solid var(--border)',
           fontSize: '0.7rem',
           color: 'var(--text-muted)',
-          backgroundColor: isActuallySyncing ? 'rgba(56, 189, 248, 0.03)' : 'transparent',
+          backgroundColor: isActuallySyncing ? 'var(--primary-glow)' : 'transparent',
           transition: 'all 0.3s ease'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
@@ -603,8 +604,8 @@ export default memo(function Sidebar() {
               width: '8px', 
               height: '8px', 
               borderRadius: '50%', 
-              backgroundColor: isActuallySyncing ? '#38bdf8' : '#10b981',
-              boxShadow: isActuallySyncing ? '0 0 10px #38bdf8' : '0 0 10px #10b981',
+              backgroundColor: isActuallySyncing ? 'var(--primary)' : 'var(--success)',
+              boxShadow: isActuallySyncing ? '0 0 10px var(--primary)' : '0 0 10px var(--success)',
               animation: isActuallySyncing ? 'pulse 2s infinite' : 'none'
             }} />
             <span style={{ fontWeight: 600, color: isActuallySyncing ? 'var(--text)' : 'var(--text-muted)' }}>
@@ -616,18 +617,18 @@ export default memo(function Sidebar() {
             {pendingOutboxCount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
                 <span>Subiendo cambios:</span>
-                <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{pendingOutboxCount}</span>
+                <span style={{ color: 'var(--warning)', fontWeight: 'bold' }}>{pendingOutboxCount}</span>
               </div>
             )}
             
             {dataSync.active && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span style={{ fontSize: '0.65rem' }}>{dataSync.label}</span>
-                <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ width: '100%', height: '3px', background: 'var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
                   <div style={{ 
                     width: `${(dataSync.current / dataSync.total) * 100}%`, 
                     height: '100%', 
-                    background: '#38bdf8',
+                    background: 'var(--primary)',
                     transition: 'width 0.3s ease'
                   }} />
                 </div>
@@ -639,11 +640,11 @@ export default memo(function Sidebar() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
                   <span style={{ fontSize: '0.65rem' }}>Archivos de Sistema</span>
                 </div>
-                <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ width: '100%', height: '3px', background: 'var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
                   <div style={{ 
                     width: `${(assetSync.current / assetSync.total) * 100}%`, 
                     height: '100%', 
-                    background: '#10b981',
+                    background: 'var(--success)',
                     transition: 'width 0.3s ease'
                   }} />
                 </div>

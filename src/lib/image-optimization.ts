@@ -1,5 +1,5 @@
 /**
- * Image optimization utility for CRM Aquatech.
+ * Image optimization utility for CRM Orbi.
  * Handles resizing, compression, and HEIC to JPEG conversion.
  * 
  * Returns a Blob (more memory efficient than Base64).

@@ -58,7 +58,7 @@ export async function createContentPipelineAction(idea: string, ideaContext: str
     }
 
     // Llamada real a GROQ para generar 5 ideas de títulos (H1)
-    const prompt = `Eres un experto en SEO y marketing de contenido para la marca Aquatech (soluciones hidráulicas, piscinas, spas, riego).
+    const prompt = `Eres un experto en SEO y marketing de contenido para la marca Orbi (soluciones hidráulicas, piscinas, spas, riego).
 El usuario quiere escribir sobre: "${idea}".
 Contexto extra: "${ideaContext}".
 
@@ -184,7 +184,7 @@ export async function selectHeadlineAction(pipelineId: number, headlineId: numbe
         const prompt = `Escribe un Artículo Pilar (aproximadamente 1200-1500 palabras) sobre: "${selectedHeadline.headline}".
 Keyword focal objetivo: "${selectedHeadline.keyword}".
 Contexto de la idea original: "${pipeline.ideaContext || pipeline.idea}".
-Marca: Aquatech (empresa en Ecuador de soluciones hidráulicas, piscinas, spas).
+Marca: Orbi (empresa en Ecuador de soluciones hidráulicas, piscinas, spas).
 Tono: Técnico pero accesible, profesional, persuasivo.
 
 Estructura requerida:
@@ -262,7 +262,7 @@ export async function refineArticleAction(articleId: number, feedback: string, c
     const groqKey = process.env.GROQ_API_KEY
     if (!groqKey) throw new Error('GROQ_API_KEY no configurada')
 
-    const prompt = `Eres un editor experto de contenido SEO para Aquatech.
+    const prompt = `Eres un editor experto de contenido SEO para Orbi.
 Tu objetivo es modificar el siguiente Artículo Pilar basado estrictamente en el feedback del usuario.
 
 REQUERIMIENTO DEL USUARIO: "${feedback}"

@@ -218,12 +218,19 @@ export default function DashboardClient({
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in" style={{ maxWidth: '1440px', margin: '0 auto' }}>
       {/* Page Header */}
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-header" style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'flex-start',
+        flexWrap: 'wrap',
+        gap: '20px'
+      }}>
         <div>
           <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">Resumen general de Aquatech</p>
+
+          <p className="page-subtitle">Resumen general de Orbi</p>
         </div>
         <ManualSyncButton />
       </div>
@@ -241,7 +248,7 @@ export default function DashboardClient({
         <div style={{
           background: pushStatus === 'denied' || pushStatus === 'unsupported' 
             ? 'rgba(255,255,255,0.05)' 
-            : 'linear-gradient(135deg, #0070c0, #38bdf8)',
+            : 'linear-gradient(135deg, #00D1C8, #00D1C8)',
           borderRadius: '16px',
           padding: '16px 20px',
           display: 'flex',
@@ -310,7 +317,7 @@ export default function DashboardClient({
                 disabled={isSubscribing}
                 style={{
                   backgroundColor: 'white',
-                  color: '#0070c0',
+                  color: '#00D1C8',
                   fontWeight: 'bold',
                   padding: '12px 24px',
                   borderRadius: '12px',
@@ -326,7 +333,7 @@ export default function DashboardClient({
               >
                 {isSubscribing ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className="animate-spin" style={{ width: '12px', height: '12px', border: '2px solid #0070c0', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
+                    <div className="animate-spin" style={{ width: '12px', height: '12px', border: '2px solid #00D1C8', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
                     <span>...</span>
                   </div>
                 ) : 'Activar'}
@@ -427,7 +434,13 @@ export default function DashboardClient({
       <h3 style={{ marginBottom: '15px', color: 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
         📈 Desempeño Semanal (Últimos 7 días)
       </h3>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '30px' }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+        gap: '15px', 
+        marginBottom: '30px' 
+      }}>
+
         <div className="card-sub" style={{ padding: '15px', background: 'var(--bg-surface)', border: '1px solid var(--primary-light)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '15px' }}>
            <div style={{ fontSize: '1.5rem' }}>⏱️</div>
            <div>
@@ -640,7 +653,12 @@ export default function DashboardClient({
       </div>
 
       {/* Two columns: Projects + Activity */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }} className="dashboard-grid">
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 450px), 1fr))', 
+        gap: 'var(--space-md)' 
+      }} className="dashboard-grid">
+
         {/* Active Projects */}
         <div className="card">
           <div className="card-header">

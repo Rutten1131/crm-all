@@ -63,7 +63,7 @@ export async function POST(req: Request) {
         fd.append('file', audioBlob, `audio.${safeExt}`)
         fd.append('model', 'whisper-large-v3')
         fd.append('language', 'es')
-        fd.append('prompt', 'Audio de gestión CRM Aquatech, Loja, Ecuador. Mantenimiento, Operador, Agenda, Piscina, Valentín, Instalación.')
+        fd.append('prompt', 'Audio de gestión CRM Orbi, Loja, Ecuador. Mantenimiento, Operador, Agenda, Piscina, Valentín, Instalación.')
 
         const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
           method: 'POST',

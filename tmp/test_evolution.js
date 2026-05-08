@@ -26,7 +26,7 @@ async function sendEvolutionTest() {
       },
       body: JSON.stringify({
         number: RECIPIENT_PHONE,
-        text: '🔵 *Prueba de Sistema Aquatech*\n\n¡Hola! Esta es una prueba de integración exitosa con la API de Evolution. \n\nEl sistema de notificaciones automáticas y recordatorios ya está activo en tu CRM.'
+        text: '🔵 *Prueba de Sistema Orbi*\n\n¡Hola! Esta es una prueba de integración exitosa con la API de Evolution. \n\nEl sistema de notificaciones automáticas y recordatorios ya está activo en tu CRM.'
       })
     });
 
@@ -45,3 +45,4 @@ async function sendEvolutionTest() {
 }
 
 sendEvolutionTest();
+

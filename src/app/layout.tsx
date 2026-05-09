@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   description: "Sistema de gestión integral para empresas de servicios. Proyectos, clientes, inventario y facturación.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.png",
-    apple: "/icon-512.png",
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
   },
   appleWebApp: {
     capable: true,
